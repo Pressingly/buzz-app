@@ -14,6 +14,17 @@ export function recoveryMessage(code: string) {
     return "Sign-in was canceled. Sign in when you’re ready.";
   if (code === "reauthentication-required")
     return "Your sign-in has expired. Sign in again to continue.";
+  // Platform key custody (custody.rs).
+  if (code === "email-verification-required")
+    return "Verify your email address with your organization, then sign in again.";
+  if (code === "local-key-differs")
+    return "This device already has a different Buzz key. Sign out of Buzz (also in Settings) to use your organization’s key.";
+  if (code === "local-key-malformed")
+    return "The Buzz key saved on this device is damaged. Contact support before changing secure storage.";
+  if (code === "key-revoked")
+    return "Your organization has turned off Buzz for this account. Contact your administrator.";
+  if (code === "key-binding-mismatch")
+    return "Your organization couldn’t confirm your Buzz key. Contact your administrator.";
   return "Sign-in did not finish. Try again.";
 }
 

@@ -18,6 +18,7 @@ mod nsec_backup_config;
 fn main() {
     configure_nsec_backup();
     configure_federated_identity();
+    configure_key_custody();
     configure_enterprise_auth();
     // Release builds enable the updater only when both values are supplied; its
     // `plugins.updater` config comes from the same values via `tauri build --config`.
@@ -300,6 +301,35 @@ fn configure_federated_identity() {
             "cargo:rustc-env={FEDERATED_IDENTITY}={}",
             serde_json::to_string(&servers).expect("public descriptors")
         );
+    }
+}
+
+const KEY_CUSTODY: &str = "BUZZ_BUILD_KEY_CUSTODY";
+
+/// Platform key custody (federated_identity/custody.rs) takes the key from the
+/// build's first sign-in server, so that server must sign in at launch, and no
+/// nsec backup may hold a second copy of it.
+fn configure_key_custody() {
+    println!("cargo:rerun-if-env-changed={KEY_CUSTODY}");
+    match std::env::var(KEY_CUSTODY).ok().as_deref() {
+        None | Some("") => {}
+        Some("platform") => {
+            let first = std::env::var(FEDERATED_IDENTITY)
+                .ok()
+                .filter(|raw| !raw.is_empty())
+                .and_then(|raw| federated_identity_config::Config::parse_list(&raw).ok())
+                .and_then(|servers| servers.into_iter().next());
+            if !first
+                .is_some_and(|server| server.sign_in == federated_identity_config::SignIn::AtLaunch)
+            {
+                panic!("{KEY_CUSTODY}=platform needs a first {FEDERATED_IDENTITY} server with \"signIn\": \"at-launch\"");
+            }
+            if std::env::var("BUZZ_NSEC_BACKUP_SERVICE_URL").is_ok_and(|url| !url.is_empty()) {
+                panic!("{KEY_CUSTODY}=platform must be built without BUZZ_NSEC_BACKUP_SERVICE_URL");
+            }
+            println!("cargo:rustc-env={KEY_CUSTODY}=platform");
+        }
+        Some(other) => panic!("{KEY_CUSTODY} must be empty or \"platform\", not {other:?}"),
     }
 }
 
