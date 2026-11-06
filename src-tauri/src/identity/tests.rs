@@ -854,13 +854,13 @@ fn platform_custody_rereads_a_key_another_copy_saved_after_launch() {
 }
 
 #[test]
-fn platform_custody_offers_sign_out_for_a_malformed_saved_key() {
+fn platform_custody_names_a_malformed_saved_key_and_keeps_it() {
     let store = Arc::new(Memory::default());
     *store.saved.lock().unwrap() = Some(b"not an nsec".to_vec());
     let public = fixture().viewer().unwrap();
     assert_eq!(
         identity(&store).adopt_platform(Zeroizing::new([1; 32]), &public),
-        Err("local-key-differs")
+        Err("local-key-malformed")
     );
     assert_eq!(
         store.saved.lock().unwrap().as_deref(),

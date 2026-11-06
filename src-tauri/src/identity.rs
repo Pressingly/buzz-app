@@ -438,7 +438,7 @@ impl Identity {
         match self.restore() {
             Ok(Some(saved)) if saved == viewer => Ok(saved),
             Ok(Some(_)) => Err("local-key-differs"),
-            Err(error) if error == MALFORMED => Err("local-key-differs"),
+            Err(error) if error == MALFORMED => Err("local-key-malformed"),
             Err(_) => Err("storage-unavailable"),
             Ok(None) => self.install(key, viewer).map_err(|_| "storage-unavailable"),
         }
