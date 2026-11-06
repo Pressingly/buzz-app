@@ -432,8 +432,8 @@ before adopting its public identity. It never generates a replacement after an
 import, read or write failure.
 
 One native owner keeps the key in memory after successful restore. The new
-create-only secure-storage item is service `xyz.block.buzz.desktop.identity` in release
-builds, or `xyz.block.buzz.desktop.identity.debug` with Rust debug assertions,
+create-only secure-storage item is service `xyz.moneta.buzz.desktop.identity` in release
+builds, or `xyz.moneta.buzz.desktop.identity.debug` with Rust debug assertions,
 account `human`. Debug worktrees share the debug item, not the release identity;
 ports and frontend dev mode do not isolate it. macOS keeps its existing default
 file Keychain/security-framework implementation. Windows uses Credential Manager;
@@ -455,7 +455,7 @@ Neither Windows Credential Manager nor Secret Service supplies per-app access
 isolation from other programs running as the same OS user.
 
 There is no file/environment fallback, automatic legacy migration or human key
-replacement. When installed old Buzz's data folder (`xyz.block.buzz.app`) exists,
+replacement. When installed old Buzz's data folder (`xyz.moneta.buzz.app`) exists,
 the welcome screen opens a **Continue with your Buzz identity?** dialog over
 itself. The landing's actions never wait for the folder check, and the dialog
 waits while a sign-in is pending or another first-run page shows. Only its
@@ -511,8 +511,8 @@ need native tests; the app hook does not supply them.
 
 For native agents, the app passes `--agent-store <operation> <service> <account>`
 after the optional `--authorize`. Operations are `read`, `replace`, and `delete`.
-The service is `xyz.block.buzz.desktop.agents` or
-`dev.local.buzz.foundation.agents`. The account is `agent-bundle-v1` or the exact
+The service is `xyz.moneta.buzz.desktop.agents` or
+`xyz.moneta.buzz.foundation.agents`. The account is `agent-bundle-v1` or the exact
 `agent:<credential-id>` selected by the bundle owner. The helper must reject
 other services, accounts, and operations. A helper that supports only human
 restore must reject agent requests. It must never return a human key for them.
@@ -536,7 +536,7 @@ binary outside this repository. Do not copy existing keys into its setup.
 For federated sessions, the app passes `--session-store <operation> <service>
 <account>`. It uses the same socket protocol as agent storage. Operations are
 `read`, `replace`, and `delete`. The only service is
-`xyz.block.buzz.desktop.federated-session.debug`. Accounts contain exactly 64
+`xyz.moneta.buzz.desktop.federated-session.debug`. Accounts contain exactly 64
 lowercase hexadecimal characters. The session owner derives them from the
 profile and deployment, or from the exact agent grant. Each direction has a
 1 MiB limit. The helper must restrict access to the exact configured accounts.
@@ -709,15 +709,15 @@ before it looks for a pending sign-out:
 - a **key lock** named for its human key store (`.<service>.instance.lock`), shared
   by every copy using that key whatever its identifier. Like the sign-out marker,
   record and backup folder, it keeps the store's service from before 1.0
-  (`dev.local.buzz.foundation.identity`), so files older builds wrote are still
+  (`xyz.moneta.buzz.foundation.identity`), so files older builds wrote are still
   found; and
-- the **all-Buzz lock** (`.dev.local.buzz.foundation.instance.lock`), named for
+- the **all-Buzz lock** (`.xyz.moneta.buzz.foundation.instance.lock`), named for
   the storage all builds share (the default plugin folder and the agent key
   service), not for the app identifier. It keeps the identifier Buzz used before
   1.0, so those builds and later ones exclude each other.
 
-Before 1.0, Buzz's identifier was `dev.local.buzz.foundation`. Before taking these
-locks, a launch as `xyz.block.buzz.desktop` renames what the old identifier names:
+Before 1.0, Buzz's identifier was `xyz.moneta.buzz.foundation`. Before taking these
+locks, a launch as `xyz.moneta.buzz.desktop` renames what the old identifier names:
 app data (with plugin storage), config, local data, caches, macOS WebKit storage,
 their sign-out trash and a pending sign-out marker, so the update keeps
 everything and finishes a sign-out the old build committed. It takes the all-Buzz
@@ -727,11 +727,11 @@ new-identifier counterpart, after a rollback for instance, the launch moves
 nothing, finishes no pending sign-out, and exits naming every such pair; neither copy
 is safely the one to keep, and an erase would miss the legacy one. A failure exits
 with a native alert, and the next launch moves what is left. Development launches
-(`just desktop`, `just desktop-bundle`) use `xyz.block.buzz.desktop.dev`, so they
+(`just desktop`, `just desktop-bundle`) use `xyz.moneta.buzz.desktop.dev`, so they
 keep their own app data and plugin storage and never take or block the installed
 app's. The first one copies the installed app's app data (without the release-only
 `archive`), config, local data and macOS WebKit storage, each from
-`xyz.block.buzz.desktop`, else `dev.local.buzz.foundation`, under the same locks,
+`xyz.moneta.buzz.desktop`, else `xyz.moneta.buzz.foundation`, under the same locks,
 so the installed app must be closed once, and takes a pending development
 sign-out marker. It refuses while the installed app has a sign-out pending, so it
 never copies storage being erased. A linked folder copies what it links to; links
@@ -739,8 +739,8 @@ inside are left out, so the copy shares nothing with the installed app's storage
 which stays in place. Copied folders keep who else may read them, but stay
 writable by their owner. An interrupted copy finishes at the next launch.
 
-Keys were saved under `dev.local.buzz.foundation.*` services before 1.0; they
-now live under `xyz.block.buzz.desktop.*`: the human key (`.identity[.debug]`),
+Keys were saved under `xyz.moneta.buzz.foundation.*` services before 1.0; they
+now live under `xyz.moneta.buzz.desktop.*`: the human key (`.identity[.debug]`),
 the agent keys (`.agents`, shared by release and development) and the TypeSafe
 key (`.jev-key[.debug]`). A read looks under the new name first. Only when the
 key is absent there does it look under the old name and copy what it finds,
@@ -817,7 +817,7 @@ already issued remain valid. A native exit runs the same best-effort teardown as
 alert and exits however that went; the dialog never offers a retry or Cancel
 once this instance's locks or agents are in an unknown state. Agents don't
 outlive Buzz: each runs under a supervisor that stops it when Buzz's socket
-closes, holding that agent's ownership lock (`dev.local.buzz.agent-ownership`
+closes, holding that agent's ownership lock (`xyz.moneta.buzz.agent-ownership`
 in the user data folder) until it has stopped. A supervisor that can't stop its
 agent keeps the lock.
 
@@ -965,7 +965,7 @@ ends only the session this copy held, never one read back from the secure
 store. Sign out of Buzz, expiry and refusals end nothing at the server.
 
 FI records use the OS secure-store service
-`xyz.block.buzz.desktop.federated-session` (with `.debug` for Rust debug
+`xyz.moneta.buzz.desktop.federated-session` (with `.debug` for Rust debug
 builds), keyed by profile and each server's deployment fingerprint, so a build's
 first server keeps the sessions it saved as the only server. Neither includes the
 app identifier: like the human key, copies in one debug/release namespace that

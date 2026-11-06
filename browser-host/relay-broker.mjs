@@ -260,7 +260,7 @@ function loadIdentity(authorizedViewer) {
       args: [
         "find-generic-password",
         "-s",
-        "buzz-desktop",
+        "xyz.moneta.buzz.legacy-desktop",
         "-a",
         "secrets",
         "-w",
@@ -269,7 +269,13 @@ function loadIdentity(authorizedViewer) {
     },
     linux: {
       command: "secret-tool",
-      args: ["lookup", "service", "buzz-desktop", "username", "secrets"],
+      args: [
+        "lookup",
+        "service",
+        "xyz.moneta.buzz.legacy-desktop",
+        "username",
+        "secrets",
+      ],
       failure:
         "Secret service read unavailable (needs libsecret-tools, an unlocked keyring in this desktop session, and Buzz desktop signed in); no credential fallback",
     },

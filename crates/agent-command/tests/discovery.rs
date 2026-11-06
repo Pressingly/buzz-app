@@ -113,7 +113,7 @@ fn plant(path: &Path, connection: String, mode: u32) {
 }
 
 fn advertised(home: &Path) -> Vec<std::path::PathBuf> {
-    let directory = home.join(".buzz-foundation/agent-connections");
+    let directory = home.join(".moneta-buzz/agent-connections");
     let mut files: Vec<_> = std::fs::read_dir(directory)
         .unwrap()
         .map(|entry| entry.unwrap().path())

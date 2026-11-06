@@ -170,11 +170,11 @@ URL, the rule, clone URL and agent socket a Git import would use.
 `--home ABSOLUTE_PATH` and `--profile NAME` precede `plugin`. The desktop and CLI
 also read `BUZZODZ_HOME` and `BUZZODZ_PROFILE` (default: `default`). Match these to
 target the same instance. Otherwise, the desktop keeps profiles in its own
-application-data folder (`xyz.block.buzz.desktop/profiles` for the installed app,
-`xyz.block.buzz.desktop.dev/profiles` for development launches). A debug CLI
+application-data folder (`xyz.moneta.buzz.desktop/profiles` for the installed app,
+`xyz.moneta.buzz.desktop.dev/profiles` for development launches). A debug CLI
 (`just cli`, `pnpm buzzodz`) defaults to the development folder and a release CLI
 to the installed app's. A release CLI refuses while only the pre-1.0
-`dev.local.buzz.foundation` folder exists; open Buzz once to move it, or pass
+`xyz.moneta.buzz.foundation` folder exists; open Buzz once to move it, or pass
 `--home`. A debug CLI likewise refuses before the first `just desktop` has copied
 the installed app's storage into the development folder.
 

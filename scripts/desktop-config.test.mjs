@@ -4,7 +4,7 @@ import { nativeMcpInstance } from "./desktop-config.mjs";
 it("gives each worktree one native MCP instance that native_mcp.rs accepts", () => {
   const instance = nativeMcpInstance("/work/a/");
   expect(instance.identifier).toMatch(
-    /^dev\.local\.buzz\.foundation\.nexus-test-[0-9a-f]{12}$/,
+    /^xyz\.moneta\.buzz\.foundation\.nexus-test-[0-9a-f]{12}$/,
   );
   // The bridge scans base..base+99; bases 100 apart keep worktrees' scans apart.
   expect(instance.port % 100).toBe(0);

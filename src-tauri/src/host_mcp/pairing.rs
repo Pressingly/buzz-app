@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use tauri::Manager;
 
-const SERVICE: &str = "xyz.block.buzz.desktop.external-app-pairing.v1";
+const SERVICE: &str = "xyz.moneta.buzz.desktop.external-app-pairing.v1";
 const LIFETIME: u64 = 30 * 24 * 60 * 60;
 static LOCK: Mutex<()> = Mutex::new(());
 static REVISION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);

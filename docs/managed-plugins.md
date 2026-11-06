@@ -18,8 +18,8 @@ which `BUZZODZ_HOME` moves.
 
 | App | Identifier |
 | --- | --- |
-| Installed Buzz | `xyz.block.buzz.desktop` |
-| Development builds (`just desktop`) | `xyz.block.buzz.desktop.dev` |
+| Installed Buzz | `xyz.moneta.buzz.desktop` |
+| Development builds (`just desktop`) | `xyz.moneta.buzz.desktop.dev` |
 
 | OS | App data folder | Policy file |
 | --- | --- | --- |
@@ -36,7 +36,7 @@ Resolution order, the same one `buzzodz` uses for plugin storage:
 
 One file serves every local profile (`BUZZODZ_PROFILE`) under that folder. A tool that
 wants both an installed and a development Buzz to see the policy writes both paths.
-The pre-1.0 `dev.local.buzz.foundation` folder is not read.
+The pre-1.0 `xyz.moneta.buzz.foundation` folder is not read.
 
 A missing file means no policy. Buzz never creates, edits or deletes the file; the
 writer creates the folder if needed. "Sign out and erase local data" clears the whole

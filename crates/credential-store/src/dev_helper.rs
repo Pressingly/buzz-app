@@ -73,7 +73,7 @@ pub(super) fn agent(
 ) -> Result<Zeroizing<Vec<u8>>> {
     if !matches!(
         service,
-        "xyz.block.buzz.desktop.agents" | "dev.local.buzz.foundation.agents"
+        "xyz.moneta.buzz.desktop.agents" | "xyz.moneta.buzz.foundation.agents"
     ) || !(account == "agent-bundle-v1" || account.starts_with("agent:"))
     {
         return Err(Error::Unavailable);
@@ -96,7 +96,7 @@ pub(super) fn session(
     account: &str,
     value: &[u8],
 ) -> Result<Zeroizing<Vec<u8>>> {
-    if service != "xyz.block.buzz.desktop.federated-session.debug"
+    if service != "xyz.moneta.buzz.desktop.federated-session.debug"
         || account.len() != 64
         || !account
             .bytes()
