@@ -36,9 +36,11 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type ReactNode,
 } from "react";
 import { registerAppShortcuts } from "./shortcuts";
 import type { AppServices } from "./services";
+import type { Identity } from "../features/identity/service";
 import { Settings } from "./Settings";
 import { SettingsSidebar } from "./SettingsSidebar";
 import { pendingManaged } from "../plugins/managed";
@@ -67,6 +69,10 @@ import {
   LaunchSignIn,
   SignInEnding,
 } from "../features/federated-identity/LaunchSignIn";
+import {
+  PlatformKeyCustody,
+  platformKeyCustody,
+} from "../features/federated-identity/PlatformKeyCustody";
 import { launchVisible, setLaunchReady, subscribeLaunch } from "./launch";
 import { AgentCompletionNotifications } from "../features/notifications/AgentCompletionNotifications";
 
@@ -83,26 +89,44 @@ export function App({ services }: { services: AppServices }) {
     update();
     return identity.subscribe(update);
   }, [identity]);
+  const app = (
+    <>
+      <ConnectedApp services={services} />
+      {!launching && (
+        <LegacyCommunityImport communities={services.communities} />
+      )}
+    </>
+  );
+  const welcome = (owner: Identity, children: ReactNode) => (
+    <Welcome
+      identity={owner}
+      communities={services.communities}
+      invites={services.invites}
+      federatedIdentity={services.firstRunFederatedIdentity}
+    >
+      {children}
+    </Welcome>
+  );
   return (
     <AgentAvatarArtworkProvider>
       <ModalWindowDragProvider
         value={isTauri() ? modalWindowDragHandlers : undefined}
       >
         <LaunchWindowControls />
-        {services.identity ? (
-          <Welcome
-            identity={services.identity}
-            communities={services.communities}
-            invites={services.invites}
-            federatedIdentity={services.firstRunFederatedIdentity}
+        {identity && platformKeyCustody() ? (
+          <PlatformKeyCustody
+            identity={identity}
+            federatedIdentity={services.federatedIdentity}
           >
+            {welcome(identity, app)}
+          </PlatformKeyCustody>
+        ) : identity ? (
+          welcome(
+            identity,
             <LaunchSignIn identity={services.federatedIdentity}>
-              <ConnectedApp services={services} />
-              {!launching && (
-                <LegacyCommunityImport communities={services.communities} />
-              )}
-            </LaunchSignIn>
-          </Welcome>
+              {app}
+            </LaunchSignIn>,
+          )
         ) : (
           <ConnectedApp services={services} />
         )}

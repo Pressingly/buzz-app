@@ -416,6 +416,24 @@ impl Identity {
         self.state = State::Ready(key);
         Ok(viewer)
     }
+    /// Platform key custody: keep a saved key that is this account's, save
+    /// the account's when none is saved, and never replace a different one.
+    fn adopt_platform(
+        &mut self,
+        secret: Zeroizing<[u8; 32]>,
+        expected: &str,
+    ) -> std::result::Result<String, &'static str> {
+        if Key::new(Zeroizing::new(*secret)).viewer().ok().as_deref() != Some(expected) {
+            return Err("invalid-response");
+        }
+        match self.restore().map_err(|_| "storage-unavailable")? {
+            Some(saved) if saved == expected => Ok(saved),
+            Some(_) => Err("local-key-differs"),
+            None => self
+                .install_recovered(secret, expected)
+                .map_err(|_| "storage-unavailable"),
+        }
+    }
     fn close(&mut self) {
         self.state = State::Closed;
     }
@@ -829,6 +847,22 @@ impl IdentityHost {
             identity.install_recovered(secret, &expected)
         })
         .await
+    }
+
+    /// Platform key custody's installer (`federated_identity::custody`).
+    pub(crate) fn platform_key_installer(&self) -> crate::federated_identity::custody::Installer {
+        let host = self.clone();
+        Arc::new(move |secret, expected| {
+            let host = host.clone();
+            Box::pin(async move {
+                with_identity(host, move |identity| {
+                    Ok(identity.adopt_platform(secret, &expected))
+                })
+                .await
+                .unwrap_or(Err("storage-unavailable"))
+                .map(drop)
+            })
+        })
     }
 
     /// Only verified, self-authored sidebar coordinates may cross the decrypt boundary.
@@ -1245,6 +1279,7 @@ pub async fn identity_import(
     nsec: String,
 ) -> Result<String> {
     let nsec = Zeroizing::new(nsec);
+    crate::federated_identity::custody::refuse_local_key()?;
     let public = with_identity(host.inner().clone(), move |identity| {
         identity.save(Some(&nsec))
     })
@@ -1268,6 +1303,7 @@ pub async fn identity_import_legacy(
     host: tauri::State<'_, IdentityHost>,
     backup: tauri::State<'_, crate::nsec_backup::NsecBackupHost>,
 ) -> Result<String> {
+    crate::federated_identity::custody::refuse_local_key()?;
     let public = with_identity(host.inner().clone(), Identity::import_legacy).await?;
     let backup = backup.inner().clone();
     let identity = host.inner().clone();
@@ -1279,6 +1315,7 @@ pub async fn identity_create(
     host: tauri::State<'_, IdentityHost>,
     backup: tauri::State<'_, crate::nsec_backup::NsecBackupHost>,
 ) -> Result<String> {
+    crate::federated_identity::custody::refuse_local_key()?;
     let public = with_identity(host.inner().clone(), |identity| identity.save(None)).await?;
     let backup = backup.inner().clone();
     let identity = host.inner().clone();

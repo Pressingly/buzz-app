@@ -212,6 +212,31 @@ web and desktop frontend builds substitute the value into compiled code: changin
 or the launched app's environment afterward cannot override it. Rebuild and
 redistribute to change a packaged value.
 
+## Platform key custody build input (Pressingly fork)
+
+`BUZZ_BUILD_KEY_CUSTODY=platform` builds Buzz for an organization that holds
+each person's Nostr key. Empty or unset keeps upstream behavior; any other
+value fails the build. It needs a first `BUZZ_BUILD_FEDERATED_IDENTITY_CONFIG`
+server with `"signIn": "at-launch"` and no `BUZZ_NSEC_BACKUP_SERVICE_URL`.
+
+- Sign-in comes before key setup. Every browser sign-in to the first server
+  fetches `GET {adapterBase}/v1/identity/key` (Bearer session, answering
+  `{nostr_pubkey, secret_key}`) natively, and installs that key the way a
+  recovered key is installed, at the sign-in's commit point and before the
+  session is saved. Sign-in never hands the key to the webview or a log; the
+  upstream Settings export stays available.
+- A restored session is not checked against the server again: every build
+  that carries this server's descriptor uses custody, so its saved key came
+  from a sign-in. Revocation still ends the session at the adapter and at
+  every relay.
+- A device without a key gets the account's; the same key is kept; a
+  different saved key is never replaced: sign-in fails and offers Sign out of
+  Buzz. A refused key (`authorization_denied`, `binding_mismatch`), an expired
+  session or a malformed answer also fail sign-in and save no session.
+- Create, import and legacy import refuse, the launch screen has no Not now,
+  and an `email_verification_required` login refusal is named for the person.
+  A restored session whose key is missing asks to sign in again.
+
 ## First-run account seed (development)
 
 After Builderlab sign-in, the first-launch flow reads four things about the

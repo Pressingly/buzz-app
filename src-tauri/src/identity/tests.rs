@@ -804,3 +804,33 @@ fn sidebar_plugin_sort_registers_are_bounded_and_namespaced() {
         assert!(super::validate_sidebar_payload("channel-sort", &record).is_err());
     }
 }
+
+#[test]
+fn platform_custody_saves_the_account_key_once_and_never_replaces_another() {
+    let store = Arc::new(Memory::default());
+    let public = fixture().viewer().unwrap();
+    let key = || Zeroizing::new([1; 32]);
+    assert_eq!(
+        identity(&store).adopt_platform(Zeroizing::new([2; 32]), &public),
+        Err("invalid-response")
+    );
+    assert!(store.saved.lock().unwrap().is_none());
+    assert_eq!(
+        identity(&store).adopt_platform(key(), &public),
+        Ok(public.clone())
+    );
+    let saved = store.saved.lock().unwrap().clone();
+    assert_eq!(
+        identity(&store).adopt_platform(key(), &public),
+        Ok(public.clone())
+    );
+    assert_eq!(*store.saved.lock().unwrap(), saved);
+
+    let other = Arc::new(Memory::default());
+    let mine = identity(&other).save(None).unwrap();
+    assert_eq!(
+        identity(&other).adopt_platform(key(), &public),
+        Err("local-key-differs")
+    );
+    assert_eq!(identity(&other).restore().unwrap(), Some(mine));
+}

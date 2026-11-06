@@ -16,6 +16,8 @@ import {
   subscribeLaunch,
 } from "../../app/launch";
 import { OnboardingScreen } from "../identity/OnboardingScreen";
+import type { Identity } from "../identity/service";
+import { SignOutDialog } from "../identity/SignOut";
 import styles from "../identity/IdentitySetup.module.css";
 import { recoveryMessage } from "./CommunitySignIn";
 import type { FederatedIdentity, SessionSnapshot } from "./service";
@@ -36,12 +38,16 @@ function needsSignIn(state: SessionSnapshot) {
  * Builds whose descriptor says `signIn: "at-launch"` sign in to the
  * organization before the app opens, and again whenever the session ends.
  * Other builds render `children` unchanged and sign in on demand.
+ * With `keyOwner` (platform key custody) the app needs the session for its
+ * key: there is no Not now, and a device holding another key can sign out.
  */
 export function LaunchSignIn({
   identity,
+  keyOwner,
   children,
 }: {
   identity: FederatedIdentity;
+  keyOwner?: Identity | undefined;
   children: ReactNode;
 }) {
   const state = useSyncExternalStore(
@@ -58,6 +64,9 @@ export function LaunchSignIn({
     identity.apiAvailable && state.authority?.signIn === "at-launch";
   // "Not now" lasts until a session is established; a later end asks again.
   const [dismissed, setDismissed] = useState(false);
+  // Sign out of Buzz replaces the screen: a modal TopLayer would make the
+  // confirmation, which portals to the body, inert.
+  const [signingOut, setSigningOut] = useState(false);
   // Once asked, the screen stays up while Try again checks the saved sign-in.
   const [asked, setAsked] = useState(false);
   if ((dismissed || asked) && state.status === "signed-in") {
@@ -128,12 +137,21 @@ export function LaunchSignIn({
   if (!required) return children;
   return (
     <>
+      {keyOwner && signingOut && (
+        <SignOutDialog
+          identity={keyOwner}
+          onClose={() => setSigningOut(false)}
+        />
+      )}
       {showing &&
+        !signingOut &&
         (opened ? (
           // Mid-run, the app may have dialogs and menus open in portals.
           <TopLayer>
             <SignInScreen
               identity={identity}
+              custody={!!keyOwner}
+              signOut={() => setSigningOut(true)}
               state={state}
               starting={!!starting}
               dismiss={() => setDismissed(true)}
@@ -142,6 +160,8 @@ export function LaunchSignIn({
         ) : (
           <SignInScreen
             identity={identity}
+            custody={!!keyOwner}
+            signOut={() => setSigningOut(true)}
             state={state}
             starting={!!starting}
             dismiss={() => setDismissed(true)}
@@ -269,11 +289,15 @@ function TopLayer({ children }: { children: ReactNode }) {
 
 function SignInScreen({
   identity,
+  custody,
+  signOut,
   state,
   starting,
   dismiss,
 }: {
   identity: FederatedIdentity;
+  custody: boolean;
+  signOut(): void;
   state: SessionSnapshot;
   starting: boolean;
   dismiss(): void;
@@ -392,9 +416,14 @@ function SignInScreen({
                 ? `Sign in with ${organization}`
                 : "Sign in"}
           </Button>
-          {!checking && (
+          {!checking && !custody && (
             <Button size="lg" variant="ghost" onClick={dismiss}>
               Not now
+            </Button>
+          )}
+          {custody && problem === "local-key-differs" && (
+            <Button size="lg" variant="ghost" onClick={signOut}>
+              Sign out of Buzz
             </Button>
           )}
         </>

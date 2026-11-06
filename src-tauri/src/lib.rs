@@ -883,6 +883,9 @@ pub fn run() {
     let federated_identity = federated_identity::FederatedIdentity::new()
         .unwrap_or_else(|message| sign_out::exit_with(&message));
     let identity = IdentityHost::default();
+    if federated_identity::custody::platform() {
+        federated_identity.on_platform_key(identity.platform_key_installer());
+    }
     let identifier = context.config().identifier.clone();
     let builder = tauri::Builder::default();
     let builder = if !tauri::is_dev() {
