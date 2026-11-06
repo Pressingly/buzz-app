@@ -6,7 +6,6 @@ import {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "../../shared/design-system/ui/Button";
-import { setLaunchReady } from "../../app/launch";
 import { OnboardingScreen } from "../identity/OnboardingScreen";
 import styles from "../identity/IdentitySetup.module.css";
 import type { Identity } from "../identity/service";
@@ -72,16 +71,11 @@ function PlatformKey({
     void identity.retry();
   }, [identity, signedIn, key.status, read, session.revision]);
   const [failure, setFailure] = useState("");
-  const blocked =
-    key.status === "error" || (key.status === "missing" && !key.busy);
-  useEffect(() => {
-    if (blocked) setLaunchReady(true);
-  }, [blocked]);
 
   if (key.status === "ready") return children;
-  const reading =
-    key.status === "missing" && signedIn && read !== session.revision;
-  if (!blocked || reading) return null;
+  const stale = key.status === "missing" && signedIn && !key.busy;
+  const reading = stale && read !== session.revision;
+  if (key.status !== "error" && (!stale || reading)) return null;
   const organization = session.authority?.organization ?? "your organization";
   const [title, description, action, run] =
     key.status === "error"
@@ -91,19 +85,15 @@ function PlatformKey({
           "Try again",
           () => identity.retry(),
         ]
-      : signedIn
-        ? [
-            "Your Buzz key isn’t on this device",
-            `Sign in again to get it from ${organization}.`,
-            "Sign in again",
-            () => federatedIdentity.signIn(),
-          ]
-        : [
-            `Sign in to ${organization}`,
-            `Buzz gets your key from ${organization} when you sign in.`,
-            "Sign in",
-            () => federatedIdentity.signIn(),
-          ];
+      : [
+          "Your Buzz key isn’t on this device",
+          `Sign in again to get it from ${organization}.`,
+          "Sign in again",
+          async () => {
+            await federatedIdentity.signOut({ revision: session.revision });
+            await federatedIdentity.signIn();
+          },
+        ];
   return (
     <OnboardingScreen
       labelledBy="platform-key-title"

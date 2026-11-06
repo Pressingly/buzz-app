@@ -225,10 +225,10 @@ server with `"signIn": "at-launch"` and no `BUZZ_NSEC_BACKUP_SERVICE_URL`.
   recovered key is installed, at the sign-in's commit point and before the
   session is saved. Sign-in never hands the key to the webview or a log; the
   upstream Settings export stays available.
-- A restored session is not checked against the server again: every build
-  that carries this server's descriptor uses custody, so its saved key came
-  from a sign-in. Revocation still ends the session at the adapter and at
-  every relay.
+- A custody build stores its sessions apart from builds without custody, so
+  its first launch always signs in through the browser, where the key rules
+  below apply. Revocation still ends the session at the adapter and at every
+  relay.
 - A device without a key gets the account's; the same key is kept; a
   different saved key is never replaced: sign-in fails and offers Sign out of
   Buzz. A refused key (`authorization_denied`, `binding_mismatch`), an expired

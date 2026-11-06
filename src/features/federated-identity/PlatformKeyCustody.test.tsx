@@ -118,18 +118,25 @@ it("offers Try again when the saved key can't be read", async () => {
   expect(key.owner.retry).not.toHaveBeenCalled();
 });
 
-it("names a refused sign-in again instead of blaming the connection", async () => {
+it("signs in again from signed out, so the launch screen can reopen or cancel", async () => {
   const { session } = custody(false);
   act(() => {
     session.publish({ status: "signed-in", revision: "restored" });
   });
-  vi.mocked(session.service.signIn).mockRejectedValueOnce(
-    new Error("key-revoked"),
-  );
+  vi.mocked(session.service.signIn).mockImplementationOnce(async () => {
+    session.publish({ status: "signed-out", failure: "key-revoked" });
+    throw new Error("key-revoked");
+  });
   await act(async () =>
     (await screen.findByRole("button", { name: "Sign in again" })).click(),
   );
+  expect(session.service.signOut).toHaveBeenCalledWith({
+    revision: "restored",
+  });
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Your organization has turned off Buzz for this account.",
   );
+  expect(
+    screen.getByRole("button", { name: "Sign in with Moneta" }),
+  ).toBeVisible();
 });

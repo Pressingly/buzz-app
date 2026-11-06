@@ -18,7 +18,7 @@ export function recoveryMessage(code: string) {
   if (code === "email-verification-required")
     return "Verify your email address with your organization, then sign in again.";
   if (code === "local-key-differs")
-    return "This device already has a different Buzz key. Sign out of Buzz to use your organization’s key.";
+    return "This device already has a different Buzz key. Sign out of Buzz (also in Settings) to use your organization’s key.";
   if (code === "key-revoked")
     return "Your organization has turned off Buzz for this account. Contact your administrator.";
   if (code === "key-binding-mismatch")

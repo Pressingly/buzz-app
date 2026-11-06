@@ -411,6 +411,9 @@ impl Identity {
         if viewer != expected {
             return Err("The recovered identity could not be verified".into());
         }
+        self.install(key, viewer)
+    }
+    fn install(&mut self, key: Key, viewer: String) -> Result<String> {
         let nsec = Zeroizing::new(key.nsec()?);
         self.store.add(nsec.as_bytes())?;
         self.state = State::Ready(key);
@@ -418,20 +421,26 @@ impl Identity {
     }
     /// Platform key custody: keep a saved key that is this account's, save
     /// the account's when none is saved, and never replace a different one.
+    /// Another Buzz copy may have saved the key since this one last looked.
     fn adopt_platform(
         &mut self,
         secret: Zeroizing<[u8; 32]>,
         expected: &str,
     ) -> std::result::Result<String, &'static str> {
-        if Key::new(Zeroizing::new(*secret)).viewer().ok().as_deref() != Some(expected) {
+        let key = Key::new(secret);
+        let viewer = key.viewer().map_err(|_| "invalid-response")?;
+        if viewer != expected {
             return Err("invalid-response");
         }
-        match self.restore().map_err(|_| "storage-unavailable")? {
-            Some(saved) if saved == expected => Ok(saved),
-            Some(_) => Err("local-key-differs"),
-            None => self
-                .install_recovered(secret, expected)
-                .map_err(|_| "storage-unavailable"),
+        if matches!(self.state, State::Missing) {
+            self.state = State::Unread;
+        }
+        match self.restore() {
+            Ok(Some(saved)) if saved == viewer => Ok(saved),
+            Ok(Some(_)) => Err("local-key-differs"),
+            Err(error) if error == MALFORMED => Err("local-key-differs"),
+            Err(_) => Err("storage-unavailable"),
+            Ok(None) => self.install(key, viewer).map_err(|_| "storage-unavailable"),
         }
     }
     fn close(&mut self) {

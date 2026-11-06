@@ -168,3 +168,19 @@ fn only_platform_custody_names_an_unverified_email() {
     assert_eq!(owner.login_refusal(&refused), "email-verification-required");
     assert_eq!(owner.login_refusal(&refused[..1]), "login-refused");
 }
+
+#[test]
+fn a_custody_build_keeps_its_sessions_apart_from_other_builds() {
+    use sha2::{Digest, Sha256};
+    let config = Config::parse(r#"{"version":1,"id":"test","identityOrigin":"https://identity.example","adapterBase":"https://identity.example","apiBasePath":"/api/","communityHosts":["relay.example"]}"#).unwrap();
+    let upstream = super::super::fingerprint(Some(&config), false).unwrap();
+    let custody = super::super::fingerprint(Some(&config), true).unwrap();
+    assert_ne!(upstream, custody);
+    assert_eq!(
+        upstream,
+        format!(
+            "{:x}",
+            Sha256::digest(serde_json::to_vec(&Some(config.identity())).unwrap())
+        )
+    );
+}
