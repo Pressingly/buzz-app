@@ -170,7 +170,7 @@ const build = (port) => ({
   beforeDevCommand: `pnpm dev:desktop --port ${port}`,
 });
 
-const identifier = "xyz.block.buzz.desktop.dev";
+const identifier = "xyz.moneta.buzz.desktop.dev";
 
 const overlay = (port) => ({
   identifier,

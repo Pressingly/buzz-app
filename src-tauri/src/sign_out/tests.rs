@@ -676,7 +676,7 @@ fn a_first_launch_creates_a_missing_user_data_folder() {
 fn every_identifier_shares_the_all_buzz_lock_and_each_key_has_its_own() {
     let (debug, release) = (
         Paths::resolve("dev.local.buzz.custom").unwrap(),
-        Paths::resolve("dev.local.buzz.foundation").unwrap(),
+        Paths::resolve("xyz.moneta.buzz.foundation").unwrap(),
     );
     assert_eq!(debug.lock, release.lock);
     assert_eq!(debug.key_lock, release.key_lock);
@@ -1669,7 +1669,7 @@ fn only_the_current_identifier_takes_every_folder_the_legacy_one_used() {
         serde_json::from_str(include_str!("../../tauri.conf.json")).unwrap();
     assert_eq!(config["identifier"], CURRENT);
     assert_eq!(
-        moves("dev.local.buzz.foundation.nexus-test-012345abcdef"),
+        moves("xyz.moneta.buzz.foundation.nexus-test-012345abcdef"),
         Some(Vec::new())
     );
     let (legacy, current) = (

@@ -278,13 +278,13 @@ fn development_and_release_items_are_separate() {
     assert_eq!(
         credentials::HUMAN_SERVICE,
         if cfg!(debug_assertions) {
-            "xyz.block.buzz.desktop.identity.debug"
+            "xyz.moneta.buzz.desktop.identity.debug"
         } else {
-            "xyz.block.buzz.desktop.identity"
+            "xyz.moneta.buzz.desktop.identity"
         }
     );
     assert_eq!(credentials::HUMAN_ACCOUNT, "human");
-    assert!(!credentials::HUMAN_SERVICE.starts_with("buzz-desktop"));
+    assert!(!credentials::HUMAN_SERVICE.starts_with("xyz.moneta.buzz.legacy-desktop"));
 }
 
 #[test]

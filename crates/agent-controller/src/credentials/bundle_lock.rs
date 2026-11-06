@@ -13,7 +13,7 @@ pub(super) fn acquire() -> Result<Lock, Failure> {
     acquire_at_home(&home)
 }
 fn acquire_at_home(home: &Path) -> Result<Lock, Failure> {
-    acquire_at(&home.join(".buzz-foundation-credential-locks"))
+    acquire_at(&home.join(".moneta-buzz-credential-locks"))
 }
 pub(super) fn acquire_at(root: &Path) -> Result<Lock, Failure> {
     if !root.is_absolute() {
@@ -72,7 +72,7 @@ impl Drop for Lock {
 #[test]
 fn first_run_creates_private_lock_directory_below_home() {
     let home = tempfile::tempdir().unwrap();
-    let root = home.path().join(".buzz-foundation-credential-locks");
+    let root = home.path().join(".moneta-buzz-credential-locks");
     assert!(!root.exists());
     let mut lock = acquire_at_home(home.path()).unwrap();
     assert_eq!(lock.epoch().unwrap(), [0; 16]);
