@@ -907,3 +907,57 @@ it("reads activity again when the relay connection changes", async () => {
   // The account isn't read again for it.
   expect(fi.request).toHaveBeenCalledTimes(2);
 });
+
+/** An identity whose sign-out native accepts, or refuses with `refusal`. */
+function signOutHost(refusal?: string) {
+  const host = backupHost(at(1, { status: "idle" }));
+  const signOut = vi.fn(async () => {
+    if (refusal) throw { message: refusal };
+  });
+  const identity = {
+    ...host.identity,
+    signOut,
+    wipeRefusal: vi.fn(async () => null),
+  } as unknown as Identity;
+  render(<IdentitySettings viewer={viewer} identity={identity} />, {
+    wrapper: ToastProvider,
+  });
+  return { signOut };
+}
+
+it("signs out directly, without the key backup, when the platform holds the key", async () => {
+  vi.stubEnv("VITE_BUZZ_KEY_CUSTODY", "platform");
+  const user = userEvent.setup();
+  const { signOut } = signOutHost();
+  const button = screen.getByRole("button", { name: "Sign out of Buzz" });
+  await user.click(button);
+  expect(signOut).toHaveBeenCalledExactlyOnceWith({
+    wipe: false,
+    removeAgents: false,
+  });
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.queryByText("Sign out of Buzz?")).toBeNull();
+  expect(screen.queryByText("I have my key")).toBeNull();
+  expect(button).toBeDisabled();
+});
+
+it("shows a refused platform sign-out and lets it be tried again", async () => {
+  vi.stubEnv("VITE_BUZZ_KEY_CUSTODY", "platform");
+  const user = userEvent.setup();
+  signOutHost("Couldn't revoke paired command-line tools");
+  const button = screen.getByRole("button", { name: "Sign out of Buzz" });
+  await user.click(button);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Couldn't revoke paired command-line tools",
+  );
+  expect(button).toBeEnabled();
+});
+
+it("asks to save the key before signing out when this device holds it", async () => {
+  const user = userEvent.setup();
+  const { signOut } = signOutHost();
+  await user.click(screen.getByRole("button", { name: "Sign out of Buzz" }));
+  expect(await screen.findByText("Sign out of Buzz?")).toBeVisible();
+  expect(screen.getByText("I have my key")).toBeVisible();
+  expect(signOut).not.toHaveBeenCalled();
+});
