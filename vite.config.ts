@@ -119,7 +119,11 @@ export default defineConfig(async ({ command, mode }) => {
   const keyCustody = process.env.BUZZ_BUILD_KEY_CUSTODY ?? "";
   if (keyCustody !== "" && keyCustody !== "platform")
     throw new Error('BUZZ_BUILD_KEY_CUSTODY must be empty or "platform".');
-  const defaultChannel = process.env.BUZZ_BUILD_DEFAULT_CHANNEL?.trim() ?? "";
+  // As the relay's canonical_channel_name: no leading "#" or whitespace.
+  const defaultChannelInput = process.env.BUZZ_BUILD_DEFAULT_CHANNEL ?? "";
+  const defaultChannel = defaultChannelInput.replace(/^[#\s]+/u, "").trimEnd();
+  if (defaultChannelInput.trim() !== "" && defaultChannel === "")
+    throw new Error("BUZZ_BUILD_DEFAULT_CHANNEL must name a channel.");
   if ([...defaultChannel].length > 120)
     throw new Error(
       "BUZZ_BUILD_DEFAULT_CHANNEL must be at most 120 characters.",

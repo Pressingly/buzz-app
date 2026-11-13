@@ -1,10 +1,14 @@
 import { getLogger } from "../developer/logging";
 import type { RelayData, RelaySnapshot } from "../relay/service";
-import { ensureDefaultChannel, type DefaultChannelSession } from "./bootstrap";
+import {
+  canonicalChannelName,
+  ensureDefaultChannel,
+  type DefaultChannelSession,
+} from "./bootstrap";
 
 /** Built with `BUZZ_BUILD_DEFAULT_CHANNEL`; empty keeps upstream behavior. */
 export const configuredDefaultChannel = (): string =>
-  (import.meta.env.VITE_BUZZ_DEFAULT_CHANNEL ?? "").trim();
+  canonicalChannelName(import.meta.env.VITE_BUZZ_DEFAULT_CHANNEL ?? "");
 
 /** Starts after the app has settled, off the startup path. */
 export const DEFAULT_CHANNEL_DELAY_MS = 5_000;
