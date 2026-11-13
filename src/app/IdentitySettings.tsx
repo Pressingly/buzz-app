@@ -420,10 +420,12 @@ export function IdentitySettings({
           </SettingsGroup>
           {identity && (
             <div className="mt-6">
-              <SettingsGroup layout="form">
-                {/* One key widget at a time; the dialog brings its own. */}
-                {!signingOut && <PrivateKey identity={identity} />}
-              </SettingsGroup>
+              {!platformKeyCustody() && (
+                <SettingsGroup layout="form">
+                  {/* One key widget at a time; the dialog brings its own. */}
+                  {!signingOut && <PrivateKey identity={identity} />}
+                </SettingsGroup>
+              )}
               <SettingsGroup>
                 <BackupRow identity={identity} viewer={viewer} />
                 {offered && viewer && builderlabIdentity && (

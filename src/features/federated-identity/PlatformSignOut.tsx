@@ -63,7 +63,6 @@ export function PlatformSignOut({ identity }: { identity: Identity }) {
           <>
             Removes your Buzz key and session from this device. Your
             organization keeps the key and gives it back when you sign in again.
-            If others use this computer, also sign out of mPass in your browser.
             <Refusal error={signOut.error} />
           </>
         }

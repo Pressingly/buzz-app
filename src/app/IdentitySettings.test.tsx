@@ -1010,3 +1010,22 @@ it("asks to save the key before signing out when this device holds it", async ()
   ).toBeNull();
   expect(signOut).not.toHaveBeenCalled();
 });
+
+it("hides the private key panel when the platform holds the key", () => {
+  vi.stubEnv("VITE_BUZZ_KEY_CUSTODY", "platform");
+  signOutHost();
+  expect(
+    screen.queryByRole("button", { name: "Reveal private key" }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Copy private key" })).toBeNull();
+});
+
+it("shows the private key panel when this device holds the key", () => {
+  signOutHost();
+  expect(
+    screen.getByRole("button", { name: "Reveal private key" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Copy private key" }),
+  ).toBeVisible();
+});
