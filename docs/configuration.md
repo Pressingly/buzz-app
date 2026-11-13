@@ -237,6 +237,29 @@ server with `"signIn": "at-launch"` and no `BUZZ_NSEC_BACKUP_SERVICE_URL`.
   and an `email_verification_required` login refusal is named for the person.
   A restored session whose key is missing asks to sign in again.
 
+## Default channel build input (Pressingly fork)
+
+`BUZZ_BUILD_DEFAULT_CHANNEL=general` gives every community the build connects
+to a shared default channel with that name, so every account lands in it.
+Empty or unset keeps upstream behavior; a name longer than 120 characters fails
+the build. Only the Vite frontend reads it.
+
+- The relay has no server-side default channel, so the app of the community's
+  relay owner (role `owner` in the relay-signed kind 13534 member list; admins
+  do nothing) sets it up with signed events, about five seconds after it
+  connects, once per community each app run.
+- If any channel already auto-joins new members, nothing happens. An open,
+  unarchived stream with the name (any letter case) is joined and flagged with
+  kind 9002 `["auto_join","true"]`. Otherwise the app creates an open stream
+  with kind 9007 at upstream's deterministic starter id (UUIDv5 of
+  `starter-channel:v1:<community origin>:<name>`), then flags it. A create the
+  relay already holds (`duplicate: channel already exists`) counts as done.
+- A private or archived channel holding the name is left alone and logged.
+- Failures are logged under `default-channel`, never shown, and wait for the
+  next run. With `BUZZ_REQUIRE_RELAY_MEMBERSHIP=false` the relay joins every
+  person to the flagged channel on their next connection; with membership
+  required it joins only people added afterwards.
+
 ## First-run account seed (development)
 
 After Builderlab sign-in, the first-launch flow reads four things about the

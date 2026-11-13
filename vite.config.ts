@@ -119,6 +119,11 @@ export default defineConfig(async ({ command, mode }) => {
   const keyCustody = process.env.BUZZ_BUILD_KEY_CUSTODY ?? "";
   if (keyCustody !== "" && keyCustody !== "platform")
     throw new Error('BUZZ_BUILD_KEY_CUSTODY must be empty or "platform".');
+  const defaultChannel = process.env.BUZZ_BUILD_DEFAULT_CHANNEL?.trim() ?? "";
+  if ([...defaultChannel].length > 120)
+    throw new Error(
+      "BUZZ_BUILD_DEFAULT_CHANNEL must be at most 120 characters.",
+    );
   // Packagers may point the bundled goose's Databricks provider at a workspace.
   const databricksHost = env.BUZZ_DATABRICKS_HOST?.trim() ?? "";
   if (databricksHost) {
@@ -191,6 +196,8 @@ export default defineConfig(async ({ command, mode }) => {
       "import.meta.env.VITE_BUZZ_DATABRICKS_HOST":
         JSON.stringify(databricksHost),
       "import.meta.env.VITE_BUZZ_KEY_CUSTODY": JSON.stringify(keyCustody),
+      "import.meta.env.VITE_BUZZ_DEFAULT_CHANNEL":
+        JSON.stringify(defaultChannel),
       "import.meta.env.VITE_BUZZ_FIRST_RUN_ACCOUNT":
         JSON.stringify(firstRunAccount),
     },
