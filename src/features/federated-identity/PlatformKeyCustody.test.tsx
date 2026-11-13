@@ -32,7 +32,7 @@ function keyFixture(saved: boolean) {
   return { owner, publish, identity: owner as unknown as Identity };
 }
 
-function custody(saved: boolean) {
+async function custody(saved: boolean, paused = false) {
   const session = federatedFixture();
   const authority = session.service.snapshot().authority;
   if (!authority) throw new Error("Fixture authority required");
@@ -49,15 +49,17 @@ function custody(saved: boolean) {
     <PlatformKeyCustody
       identity={key.identity}
       federatedIdentity={session.service}
+      launchPaused={async () => paused}
     >
       <p>Buzz</p>
     </PlatformKeyCustody>,
   );
+  await act(async () => {});
   return { session, key };
 }
 
 it("signs in first, then reads the key that sign-in installed", async () => {
-  const { session, key } = custody(true);
+  const { session, key } = await custody(true);
   act(() => {
     session.publish({ status: "signed-out" });
   });
@@ -78,7 +80,7 @@ it("signs in first, then reads the key that sign-in installed", async () => {
 });
 
 it("offers Sign out of Buzz when the device holds another key", async () => {
-  const { session } = custody(true);
+  const { session } = await custody(true);
   act(() => {
     session.publish({ status: "signed-out" });
   });
@@ -94,7 +96,7 @@ it("offers Sign out of Buzz when the device holds another key", async () => {
 });
 
 it("asks to sign in again when a saved session has no key here", async () => {
-  const { session, key } = custody(false);
+  const { session, key } = await custody(false);
   act(() => {
     session.publish({ status: "signed-in", revision: "restored" });
   });
@@ -106,7 +108,7 @@ it("asks to sign in again when a saved session has no key here", async () => {
 });
 
 it("offers Try again when the saved key can't be read", async () => {
-  const { session, key } = custody(true);
+  const { session, key } = await custody(true);
   act(() => {
     key.publish({ status: "error", error: "Secure storage is locked" });
     session.publish({ status: "signed-in", revision: "restored" });
@@ -119,7 +121,7 @@ it("offers Try again when the saved key can't be read", async () => {
 });
 
 it("signs in again from signed out, so the launch screen can reopen or cancel", async () => {
-  const { session } = custody(false);
+  const { session } = await custody(false);
   act(() => {
     session.publish({ status: "signed-in", revision: "restored" });
   });
@@ -139,4 +141,44 @@ it("signs in again from signed out, so the launch screen can reopen or cancel", 
   expect(
     screen.getByRole("button", { name: "Sign in with Moneta" }),
   ).toBeVisible();
+});
+
+it("waits for Sign in at a launch that follows a sign-out", async () => {
+  const { session } = await custody(false, true);
+  act(() => {
+    session.publish({ status: "signed-out" });
+  });
+  const signIn = await screen.findByRole("button", {
+    name: "Sign in with Moneta",
+  });
+  expect(signIn).toBeEnabled();
+  expect(session.service.signIn).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "Not now" })).toBeNull();
+  await act(async () => signIn.click());
+  expect(session.service.signIn).toHaveBeenCalledOnce();
+});
+
+it("still waits after quitting from that screen and opening Buzz again", async () => {
+  const first = await custody(false, true);
+  act(() => {
+    first.session.publish({ status: "signed-out" });
+  });
+  cleanup();
+  const { session } = await custody(false, true);
+  act(() => {
+    session.publish({ status: "signed-out" });
+  });
+  expect(
+    await screen.findByRole("button", { name: "Sign in with Moneta" }),
+  ).toBeVisible();
+  expect(first.session.service.signIn).not.toHaveBeenCalled();
+  expect(session.service.signIn).not.toHaveBeenCalled();
+});
+
+it("opens the browser sign-in at a first launch", async () => {
+  const { session } = await custody(false);
+  act(() => {
+    session.publish({ status: "signed-out" });
+  });
+  expect(session.service.signIn).toHaveBeenCalledOnce();
 });

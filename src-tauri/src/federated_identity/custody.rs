@@ -8,7 +8,14 @@ use super::{
     protocol::{self, Failure},
 };
 use serde::Deserialize;
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{
+    fs,
+    future::Future,
+    io::ErrorKind,
+    path::{Path, PathBuf},
+    pin::Pin,
+    sync::Arc,
+};
 use zeroize::{Zeroize, Zeroizing};
 
 pub(crate) fn platform() -> bool {
@@ -57,8 +64,62 @@ impl PlatformKey {
     pub(super) async fn install(self, installer: &Installer) -> Result<(), Failure> {
         installer(self.secret, self.pubkey)
             .await
-            .map_err(Failure::from)
+            .map_err(Failure::from)?;
+        if platform() {
+            if let Some(flag) = sign_in_paused_flag() {
+                resume_sign_in(&flag);
+            }
+        }
+        Ok(())
     }
+}
+
+/// After a sign-out the next launches wait for the person to choose Sign in
+/// instead of opening the browser, until a sign-in installs the key again.
+/// Beside the sign-out marker at the data folder's root, which no erase
+/// clears; named for the key store, like the sign-out record.
+fn sign_in_paused_flag() -> Option<PathBuf> {
+    Some(dirs::data_dir()?.join(format!(
+        ".{}.custody-sign-in-paused",
+        buzz_credential_store::HUMAN_STORE
+    )))
+}
+
+/// A failed write only brings back the browser opening at launch, so it never
+/// fails the sign-out that calls it.
+fn pause_sign_in(flag: &Path) {
+    if let Err(error) = fs::write(flag, b"") {
+        eprintln!("buzz: could not pause launch sign-in: {error}");
+    }
+}
+
+fn resume_sign_in(flag: &Path) {
+    match fs::remove_file(flag) {
+        Err(error) if error.kind() != ErrorKind::NotFound => {
+            eprintln!("buzz: could not resume launch sign-in: {error}");
+        }
+        _ => {}
+    }
+}
+
+fn sign_in_paused(flag: &Path) -> bool {
+    flag.try_exists().unwrap_or(false)
+}
+
+/// Called as a pending sign-out finishes at launch (`sign_out::boot`).
+pub(crate) fn pause_launch_sign_in() {
+    if !platform() {
+        return;
+    }
+    if let Some(flag) = sign_in_paused_flag() {
+        pause_sign_in(&flag);
+    }
+}
+
+/// Whether this launch follows a sign-out and should wait for Sign in.
+#[tauri::command]
+pub(crate) fn platform_key_sign_in_paused() -> bool {
+    platform() && sign_in_paused_flag().is_some_and(|flag| sign_in_paused(&flag))
 }
 
 /// Fetches the key of the session just exchanged. A refusal here fails the

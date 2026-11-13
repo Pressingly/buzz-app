@@ -184,3 +184,29 @@ fn a_custody_build_keeps_its_sessions_apart_from_other_builds() {
         )
     );
 }
+
+#[test]
+fn a_sign_out_pauses_launch_sign_in_until_a_key_is_installed() {
+    let folder = tempfile::tempdir().unwrap();
+    let flag = folder.path().join(".store.custody-sign-in-paused");
+    assert!(!sign_in_paused(&flag));
+    resume_sign_in(&flag);
+    pause_sign_in(&flag);
+    pause_sign_in(&flag);
+    assert!(sign_in_paused(&flag));
+    resume_sign_in(&flag);
+    assert!(!sign_in_paused(&flag));
+}
+
+#[test]
+fn an_unwritable_flag_leaves_launch_sign_in_unpaused() {
+    let folder = tempfile::tempdir().unwrap();
+    let flag = folder.path().join("missing").join(".flag");
+    pause_sign_in(&flag);
+    assert!(!sign_in_paused(&flag));
+}
+
+#[test]
+fn builds_without_custody_never_pause_launch_sign_in() {
+    assert_eq!(platform_key_sign_in_paused(), platform());
+}

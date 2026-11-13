@@ -683,6 +683,7 @@ fn commands<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Sen
         federated_identity::federated_identity_sign_in,
         federated_identity::federated_identity_cancel_sign_in,
         federated_identity::federated_identity_sign_out,
+        federated_identity::custody::platform_key_sign_in_paused,
         federated_identity::access::federated_identity_register,
         federated_identity::access::federated_identity_unregister,
         federated_identity::access::federated_identity_request,
@@ -871,7 +872,9 @@ pub fn run() {
             || {
                 host_mcp::pairing::revoke(&paths.app_data)?;
                 federated_identity::store::remove_all(federated_identity::store::root()?)?;
-                identity::remove_saved_key()
+                identity::remove_saved_key()?;
+                federated_identity::custody::pause_launch_sign_in();
+                Ok(())
             },
         )
         .and_then(|instance| {

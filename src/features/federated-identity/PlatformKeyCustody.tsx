@@ -17,6 +17,25 @@ import type { FederatedIdentity } from "./service";
 export const platformKeyCustody = () =>
   import.meta.env.VITE_BUZZ_KEY_CUSTODY === "platform";
 
+/** Whether this launch follows a sign-out, so sign-in waits for the person (`custody.rs`). */
+const nativeLaunchPaused = () =>
+  invoke<boolean>("platform_key_sign_in_paused").catch(() => false);
+
+/** Asked once per mount; undefined until native answers. */
+function useLaunchPaused(launchPaused: () => Promise<boolean>) {
+  const [paused, setPaused] = useState<boolean>();
+  useEffect(() => {
+    let current = true;
+    void launchPaused().then((answer) => {
+      if (current) setPaused(answer);
+    });
+    return () => {
+      current = false;
+    };
+  }, [launchPaused]);
+  return paused;
+}
+
 /**
  * Platform key custody: sign-in comes first, and native installs the
  * account's key with it (`custody.rs`). `children` (first run and the app)
@@ -25,20 +44,29 @@ export const platformKeyCustody = () =>
 export function PlatformKeyCustody({
   identity,
   federatedIdentity,
+  launchPaused = nativeLaunchPaused,
   children,
 }: {
   identity: Identity;
   federatedIdentity: FederatedIdentity;
+  launchPaused?: () => Promise<boolean>;
   children: ReactNode;
 }) {
+  const paused = useLaunchPaused(launchPaused);
   // No first-run intro: the window shows the sign-in screen at once.
   useEffect(() => {
     if (document.documentElement.dataset.welcomeIntro !== "pending") return;
     delete document.documentElement.dataset.welcomeIntro;
     void invoke("plugin:window|show", { label: "main" }).catch(() => {});
   }, []);
+  // LaunchSignIn decides at its first settled state, so it mounts knowing.
+  if (paused === undefined) return null;
   return (
-    <LaunchSignIn identity={federatedIdentity} keyOwner={identity}>
+    <LaunchSignIn
+      identity={federatedIdentity}
+      keyOwner={identity}
+      autoStart={!paused}
+    >
       <PlatformKey identity={identity} federatedIdentity={federatedIdentity}>
         {children}
       </PlatformKey>

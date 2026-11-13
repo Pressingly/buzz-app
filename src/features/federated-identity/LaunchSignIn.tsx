@@ -44,10 +44,13 @@ function needsSignIn(state: SessionSnapshot) {
 export function LaunchSignIn({
   identity,
   keyOwner,
+  autoStart = true,
   children,
 }: {
   identity: FederatedIdentity;
   keyOwner?: Identity | undefined;
+  /** False waits for Sign in at launch (custody, after a sign-out). */
+  autoStart?: boolean;
   children: ReactNode;
 }) {
   const state = useSyncExternalStore(
@@ -99,6 +102,7 @@ export function LaunchSignIn({
     previous.current = state.status;
     if (!required || dismissed) return;
     const launch =
+      autoStart &&
       from === null &&
       (state.status === "signed-out" ||
         state.status === "reauthentication-required");
@@ -110,7 +114,7 @@ export function LaunchSignIn({
       .signIn()
       .catch(() => {})
       .finally(() => setStarting(null));
-  }, [identity, required, dismissed, state.status]);
+  }, [identity, required, dismissed, autoStart, state.status]);
 
   // The launch mark covers the window until something is ready to show.
   useEffect(() => {
