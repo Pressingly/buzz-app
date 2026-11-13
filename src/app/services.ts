@@ -1,6 +1,7 @@
 import { ArtifactStorageService } from "../features/artifact-storage/service";
 import { provideArtifactStoreSync } from "../features/relay/artifact-store-sync";
 import { createAdminAccess } from "../bundled/admin-access";
+import { bindDefaultChannel } from "../features/default-channel/bind";
 import { nativeRelayStaff } from "../features/relay-staff/native";
 import { createLocalAgentActivity } from "../features/agents/local-activity";
 // FOUNDATION: Compose the bundled distribution, plugin runtime, and services here.
@@ -142,6 +143,7 @@ export function createServices() {
   const adminAccess = createAdminAccess(relay, communities, nativeRelayStaff());
   ctx.provide("adminAccess", adminAccess);
   ctx.effect(() => () => adminAccess.dispose());
+  ctx.effect(() => bindDefaultChannel(relay));
   const agents = new AgentsService(
     ctx,
     communities,

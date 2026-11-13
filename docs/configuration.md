@@ -237,6 +237,45 @@ server with `"signIn": "at-launch"` and no `BUZZ_NSEC_BACKUP_SERVICE_URL`.
   and an `email_verification_required` login refusal is named for the person.
   A restored session whose key is missing asks to sign in again.
 
+## Default channel build input (Pressingly fork)
+
+`BUZZ_BUILD_DEFAULT_CHANNEL=general` gives each community the relay owner
+opens a shared default channel with that name, so every account lands in it.
+Empty or unset keeps upstream behavior. The value is normalized like the
+relay's channel names (leading `#` and surrounding whitespace removed); a value
+that leaves nothing, or more than 120 characters, fails the build. Only the
+Vite frontend reads it.
+
+- The relay has no server-side default channel, so the relay owner's app sets
+  it up with signed events. The owner is role `owner` in the relay-signed kind
+  13534 member list, which the relay writes only when it runs with
+  `RELAY_OWNER_PUBKEY` (the bundle's `BUZZ_RELAY_OWNER_PUBKEY`); without it
+  nothing happens. Admins do nothing.
+- It runs about five seconds after the app connects to a community, once per
+  community and account each app run, and only in communities the owner
+  actually opens in that run.
+- The app pages through every channel metadata record (500 per read, at most
+  20 reads). If any channel already auto-joins new members, or the listing
+  cannot be completed, nothing happens.
+- An open, unarchived stream with the name (any letter case) is joined and
+  flagged with kind 9002 `["auto_join","true"]`. Joining publishes a kind 9021
+  only when the owner is not a member yet: the app's auto-join edit requires
+  channel membership.
+- Otherwise the app creates an open stream with kind 9007 at upstream's
+  deterministic starter id (UUIDv5 of
+  `starter-channel:v1:<community origin>:<name>`), then joins and flags it. A
+  create the relay already holds (`duplicate: channel already exists`) counts
+  as done.
+- A private or archived channel holding the name is left alone and logged.
+- Channel actions run one at a time. If the owner is mid-action (archive,
+  leave, an auto-join switch) when the setup runs, it waits two seconds and
+  tries once more; the owner's own action can likewise report another action
+  in progress for those few seconds.
+- Failures are logged under `default-channel`, never shown, and wait for the
+  next run. With `BUZZ_REQUIRE_RELAY_MEMBERSHIP=false` the relay joins every
+  person to the flagged channel on their next connection; with membership
+  required it joins only people added afterwards.
+
 ## First-run account seed (development)
 
 After Builderlab sign-in, the first-launch flow reads four things about the
