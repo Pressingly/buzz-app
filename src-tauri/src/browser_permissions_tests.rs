@@ -77,6 +77,7 @@ fn native_command_permissions_isolate_webviews() {
         "federated_identity_sign_in",
         "federated_identity_cancel_sign_in",
         "federated_identity_sign_out",
+        "platform_key_sign_in_paused",
         "credential_pair_answer",
         "credential_pairings_list",
         "credential_pairing_revoke",

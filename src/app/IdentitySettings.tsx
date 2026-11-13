@@ -28,6 +28,8 @@ import {
 import { recoveryMessage } from "../features/federated-identity/CommunitySignIn";
 import { PrivateKey } from "../features/identity/PrivateKey";
 import { SignOutDialog } from "../features/identity/SignOut";
+import { platformKeyCustody } from "../features/federated-identity/PlatformKeyCustody";
+import { PlatformSignOut } from "../features/federated-identity/PlatformSignOut";
 import { Header, InlineHeader } from "../shared/design-system/ui/Header";
 import { SettingsGroup } from "../shared/design-system/ui/SettingsGroup";
 import { PreferenceRow } from "../shared/design-system/ui/PreferenceRow";
@@ -418,10 +420,12 @@ export function IdentitySettings({
           </SettingsGroup>
           {identity && (
             <div className="mt-6">
-              <SettingsGroup layout="form">
-                {/* One key widget at a time; the dialog brings its own. */}
-                {!signingOut && <PrivateKey identity={identity} />}
-              </SettingsGroup>
+              {!platformKeyCustody() && (
+                <SettingsGroup layout="form">
+                  {/* One key widget at a time; the dialog brings its own. */}
+                  {!signingOut && <PrivateKey identity={identity} />}
+                </SettingsGroup>
+              )}
               <SettingsGroup>
                 <BackupRow identity={identity} viewer={viewer} />
                 {offered && viewer && builderlabIdentity && (
@@ -432,15 +436,19 @@ export function IdentitySettings({
                     lastActive={lastActive}
                   />
                 )}
-                <PreferenceRow
-                  title="Sign out of Buzz"
-                  subtitle="Remove your private key from this device. Also signs you out of your organization and ends Builderlab and hosted community logins."
-                  trailing={
-                    <Button type="button" onClick={() => setSigningOut(true)}>
-                      Sign out of Buzz
-                    </Button>
-                  }
-                />
+                {platformKeyCustody() ? (
+                  <PlatformSignOut identity={identity} />
+                ) : (
+                  <PreferenceRow
+                    title="Sign out of Buzz"
+                    subtitle="Remove your private key from this device. Also signs you out of your organization and ends Builderlab and hosted community logins."
+                    trailing={
+                      <Button type="button" onClick={() => setSigningOut(true)}>
+                        Sign out of Buzz
+                      </Button>
+                    }
+                  />
+                )}
               </SettingsGroup>
               {signingOut && (
                 <SignOutDialog

@@ -91,6 +91,7 @@ fn main() {
             "nsec_backup_set_choice",
             "sign_out",
             "sign_out_wipe_refusal",
+            "platform_key_sign_in_paused",
             "identity_prepare_remote_agent_authorization",
             "identity_sign_builderlab_binding",
             "federated_identity_snapshot",

@@ -8,7 +8,7 @@ use super::{
     protocol::{self, Failure},
 };
 use serde::Deserialize;
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{fs, future::Future, io::ErrorKind, path::PathBuf, pin::Pin, sync::Arc};
 use zeroize::{Zeroize, Zeroizing};
 
 pub(crate) fn platform() -> bool {
@@ -59,6 +59,71 @@ impl PlatformKey {
             .await
             .map_err(Failure::from)
     }
+}
+
+/// After a sign-out the next launches wait for the person to choose Sign in
+/// instead of opening the browser, until a sign-in installs the key again.
+/// The flag sits beside the sign-out marker at the data folder's root, which
+/// no erase clears, and is named like it, so a development copy never pauses
+/// the installed one.
+#[derive(Clone)]
+pub(crate) struct LaunchPause {
+    flag: Option<PathBuf>,
+}
+impl LaunchPause {
+    pub(crate) fn for_app(identifier: &str) -> Self {
+        Self::at(dirs::data_dir().map(|data| data.join(flag_name(identifier))))
+    }
+    fn at(flag: Option<PathBuf>) -> Self {
+        Self { flag }
+    }
+    /// A failed write only brings back the browser opening at launch, so it
+    /// never fails the sign-out that calls it.
+    pub(crate) fn pause(&self) {
+        let Some(flag) = &self.flag else { return };
+        if let Err(error) = fs::write(flag, b"") {
+            eprintln!("buzz: could not pause launch sign-in: {error}");
+        }
+    }
+    fn resume(&self) {
+        let Some(flag) = &self.flag else { return };
+        match fs::remove_file(flag) {
+            Err(error) if error.kind() != ErrorKind::NotFound => {
+                eprintln!("buzz: could not resume launch sign-in: {error}");
+            }
+            _ => {}
+        }
+    }
+    fn paused(&self) -> bool {
+        self.flag
+            .as_deref()
+            .is_some_and(|flag| flag.try_exists().unwrap_or(false))
+    }
+    /// `installer`, then resume launch sign-in once the key is saved.
+    pub(crate) fn resuming(self, installer: Installer) -> Installer {
+        Arc::new(move |secret, pubkey| {
+            let installer = installer.clone();
+            let pause = self.clone();
+            Box::pin(async move {
+                installer(secret, pubkey).await?;
+                pause.resume();
+                Ok(())
+            })
+        })
+    }
+}
+
+fn flag_name(identifier: &str) -> String {
+    format!(
+        ".{identifier}--{}.custody-sign-in-paused",
+        buzz_credential_store::HUMAN_STORE
+    )
+}
+
+/// Whether this launch follows a sign-out and should wait for Sign in.
+#[tauri::command]
+pub(crate) fn platform_key_sign_in_paused<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> bool {
+    platform() && LaunchPause::for_app(&app.config().identifier).paused()
 }
 
 /// Fetches the key of the session just exchanged. A refusal here fails the

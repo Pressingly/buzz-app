@@ -907,3 +907,125 @@ it("reads activity again when the relay connection changes", async () => {
   // The account isn't read again for it.
   expect(fi.request).toHaveBeenCalledTimes(2);
 });
+
+/** An identity whose sign-out native accepts, or refuses with `refusal`. */
+function signOutHost(refusal?: string, wipeRefusal: string | null = null) {
+  const host = backupHost(at(1, { status: "idle" }));
+  const signOut = vi.fn(async () => {
+    if (refusal) throw { message: refusal };
+  });
+  const identity = {
+    ...host.identity,
+    signOut,
+    wipeRefusal: vi.fn(async () => wipeRefusal),
+  } as unknown as Identity;
+  render(<IdentitySettings viewer={viewer} identity={identity} />, {
+    wrapper: ToastProvider,
+  });
+  return { signOut };
+}
+
+it("signs out directly, without the key backup, when the platform holds the key", async () => {
+  vi.stubEnv("VITE_BUZZ_KEY_CUSTODY", "platform");
+  const user = userEvent.setup();
+  const { signOut } = signOutHost();
+  const button = screen.getByRole("button", { name: "Sign out of Buzz" });
+  await user.click(button);
+  expect(signOut).toHaveBeenCalledExactlyOnceWith({
+    wipe: false,
+    removeAgents: false,
+  });
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.queryByText("Sign out of Buzz?")).toBeNull();
+  expect(screen.queryByText("I have my key")).toBeNull();
+  expect(button).toBeDisabled();
+});
+
+it("shows a refused platform sign-out in its row and lets it be tried again", async () => {
+  vi.stubEnv("VITE_BUZZ_KEY_CUSTODY", "platform");
+  const user = userEvent.setup();
+  signOutHost("Couldn't revoke paired command-line tools");
+  const button = screen.getByRole("button", { name: "Sign out of Buzz" });
+  await user.click(button);
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Couldn't revoke paired command-line tools");
+  const row = alert.closest(".buzz-preference-row");
+  expect(row).toContainElement(button);
+  expect(row?.parentElement).toHaveClass("buzz-settings-group");
+  expect(button).toBeEnabled();
+});
+
+it("erases the device only after the typed confirmation, without revealing the key", async () => {
+  vi.stubEnv("VITE_BUZZ_KEY_CUSTODY", "platform");
+  const user = userEvent.setup();
+  const { signOut } = signOutHost();
+  await user.click(screen.getByRole("button", { name: "Sign out and erase" }));
+  const dialog = await screen.findByRole("alertdialog");
+  expect(within(dialog).queryByText("I have my key")).toBeNull();
+  expect(
+    within(dialog).queryByRole("button", { name: /private key/i }),
+  ).toBeNull();
+  const confirm = within(dialog).getByRole("button", {
+    name: "Sign out and erase",
+  });
+  await waitFor(() =>
+    expect(within(dialog).getByRole("textbox")).toBeEnabled(),
+  );
+  expect(confirm).toBeDisabled();
+  await user.click(
+    within(dialog).getByRole("checkbox", { name: "Also remove my agents" }),
+  );
+  await user.type(within(dialog).getByRole("textbox"), "erase all my data");
+  await user.click(confirm);
+  expect(signOut).toHaveBeenCalledExactlyOnceWith({
+    wipe: true,
+    removeAgents: true,
+  });
+});
+
+it("keeps erasing off when native refuses it", async () => {
+  vi.stubEnv("VITE_BUZZ_KEY_CUSTODY", "platform");
+  const user = userEvent.setup();
+  const { signOut } = signOutHost(undefined, "Erasing is unavailable here");
+  await user.click(screen.getByRole("button", { name: "Sign out and erase" }));
+  const dialog = await screen.findByRole("alertdialog");
+  expect(
+    await within(dialog).findByText("Erasing is unavailable here."),
+  ).toBeVisible();
+  expect(within(dialog).getByRole("textbox")).toBeDisabled();
+  expect(
+    within(dialog).getByRole("button", { name: "Sign out and erase" }),
+  ).toBeDisabled();
+  expect(signOut).not.toHaveBeenCalled();
+});
+
+it("asks to save the key before signing out when this device holds it", async () => {
+  const user = userEvent.setup();
+  const { signOut } = signOutHost();
+  await user.click(screen.getByRole("button", { name: "Sign out of Buzz" }));
+  expect(await screen.findByText("Sign out of Buzz?")).toBeVisible();
+  expect(screen.getByText("I have my key")).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Sign out and erase" }),
+  ).toBeNull();
+  expect(signOut).not.toHaveBeenCalled();
+});
+
+it("hides the private key panel when the platform holds the key", () => {
+  vi.stubEnv("VITE_BUZZ_KEY_CUSTODY", "platform");
+  signOutHost();
+  expect(
+    screen.queryByRole("button", { name: "Reveal private key" }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Copy private key" })).toBeNull();
+});
+
+it("shows the private key panel when this device holds the key", () => {
+  signOutHost();
+  expect(
+    screen.getByRole("button", { name: "Reveal private key" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Copy private key" }),
+  ).toBeVisible();
+});
