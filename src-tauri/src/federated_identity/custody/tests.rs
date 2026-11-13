@@ -185,28 +185,62 @@ fn a_custody_build_keeps_its_sessions_apart_from_other_builds() {
     );
 }
 
+fn pause_in(folder: &tempfile::TempDir) -> LaunchPause {
+    LaunchPause::at(Some(folder.path().join(flag_name("xyz.moneta.buzz.test"))))
+}
+
 #[test]
-fn a_sign_out_pauses_launch_sign_in_until_a_key_is_installed() {
+fn a_sign_out_pauses_launch_sign_in_until_it_resumes() {
     let folder = tempfile::tempdir().unwrap();
-    let flag = folder.path().join(".store.custody-sign-in-paused");
-    assert!(!sign_in_paused(&flag));
-    resume_sign_in(&flag);
-    pause_sign_in(&flag);
-    pause_sign_in(&flag);
-    assert!(sign_in_paused(&flag));
-    resume_sign_in(&flag);
-    assert!(!sign_in_paused(&flag));
+    let pause = pause_in(&folder);
+    assert!(!pause.paused());
+    pause.resume();
+    pause.pause();
+    pause.pause();
+    assert!(pause.paused());
+    pause.resume();
+    assert!(!pause.paused());
 }
 
 #[test]
 fn an_unwritable_flag_leaves_launch_sign_in_unpaused() {
     let folder = tempfile::tempdir().unwrap();
-    let flag = folder.path().join("missing").join(".flag");
-    pause_sign_in(&flag);
-    assert!(!sign_in_paused(&flag));
+    let pause = LaunchPause::at(Some(folder.path().join("missing").join(".flag")));
+    pause.pause();
+    assert!(!pause.paused());
+    let nowhere = LaunchPause::at(None);
+    nowhere.pause();
+    assert!(!nowhere.paused());
 }
 
 #[test]
-fn builds_without_custody_never_pause_launch_sign_in() {
-    assert_eq!(platform_key_sign_in_paused(), platform());
+fn each_app_identifier_has_its_own_flag() {
+    assert_ne!(
+        flag_name("xyz.moneta.buzz.app"),
+        flag_name("xyz.moneta.buzz.dev")
+    );
+    assert!(flag_name("xyz.moneta.buzz.app").starts_with(".xyz.moneta.buzz.app--"));
+}
+
+#[tokio::test]
+async fn installing_the_key_resumes_launch_sign_in_and_a_refusal_keeps_it_paused() {
+    let folder = tempfile::tempdir().unwrap();
+    let pause = pause_in(&folder);
+    pause.pause();
+    let store = Arc::new(Memory::default());
+    let (refused, _) = installer(store.clone(), Err("local-key-differs"));
+    let refused = pause.clone().resuming(refused);
+    assert_eq!(
+        refused(Zeroizing::new([1; 32]), PUBKEY.into()).await,
+        Err("local-key-differs")
+    );
+    assert!(pause.paused());
+    let (accepted, installed) = installer(store, Ok(()));
+    let accepted = pause.clone().resuming(accepted);
+    assert_eq!(
+        accepted(Zeroizing::new([1; 32]), PUBKEY.into()).await,
+        Ok(())
+    );
+    assert_eq!(installed.lock().unwrap().len(), 1);
+    assert!(!pause.paused());
 }

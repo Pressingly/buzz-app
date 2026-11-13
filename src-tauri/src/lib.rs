@@ -848,6 +848,8 @@ pub fn run() {
     });
     // A pending Sign out finishes before any window, webview storage, service or
     // identity read; if it can't, Buzz explains and exits without opening.
+    let launch_pause =
+        federated_identity::custody::LaunchPause::for_app(&context.config().identifier);
     let instance = sign_out::Paths::resolve(&context.config().identifier).map(|paths| {
         sign_out::boot(
             &paths,
@@ -873,7 +875,9 @@ pub fn run() {
                 host_mcp::pairing::revoke(&paths.app_data)?;
                 federated_identity::store::remove_all(federated_identity::store::root()?)?;
                 identity::remove_saved_key()?;
-                federated_identity::custody::pause_launch_sign_in();
+                if federated_identity::custody::platform() {
+                    launch_pause.pause();
+                }
                 Ok(())
             },
         )
@@ -887,7 +891,8 @@ pub fn run() {
         .unwrap_or_else(|message| sign_out::exit_with(&message));
     let identity = IdentityHost::default();
     if federated_identity::custody::platform() {
-        federated_identity.on_platform_key(identity.platform_key_installer());
+        federated_identity
+            .on_platform_key(launch_pause.resuming(identity.platform_key_installer()));
     }
     let identifier = context.config().identifier.clone();
     let builder = tauri::Builder::default();

@@ -5,7 +5,23 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import type { Identity, IdentitySnapshot } from "../identity/service";
 import { PlatformKeyCustody } from "./PlatformKeyCustody";
 import { federatedFixture } from "./testing";
-afterEach(cleanup);
+
+const invoke = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/api/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tauri-apps/api/core")>()),
+  invoke,
+}));
+afterEach(() => {
+  cleanup();
+  invoke.mockReset();
+});
+
+/** Native's answer to `platform_key_sign_in_paused`. */
+function nativePaused(answer: () => Promise<boolean>) {
+  invoke.mockImplementation(async (command: string) =>
+    command === "platform_key_sign_in_paused" ? answer() : undefined,
+  );
+}
 
 /** The key owner as custody sees it: native installs, `retry` reads. */
 function keyFixture(saved: boolean) {
@@ -32,7 +48,8 @@ function keyFixture(saved: boolean) {
   return { owner, publish, identity: owner as unknown as Identity };
 }
 
-async function custody(saved: boolean, paused = false) {
+/** `"native"` asks native, as the app does; a boolean answers directly. */
+async function custody(saved: boolean, paused: boolean | "native" = false) {
   const session = federatedFixture();
   const authority = session.service.snapshot().authority;
   if (!authority) throw new Error("Fixture authority required");
@@ -49,7 +66,7 @@ async function custody(saved: boolean, paused = false) {
     <PlatformKeyCustody
       identity={key.identity}
       federatedIdentity={session.service}
-      launchPaused={async () => paused}
+      {...(paused === "native" ? {} : { launchPaused: async () => paused })}
     >
       <p>Buzz</p>
     </PlatformKeyCustody>,
@@ -158,21 +175,27 @@ it("waits for Sign in at a launch that follows a sign-out", async () => {
   expect(session.service.signIn).toHaveBeenCalledOnce();
 });
 
-it("still waits after quitting from that screen and opening Buzz again", async () => {
-  const first = await custody(false, true);
-  act(() => {
-    first.session.publish({ status: "signed-out" });
-  });
-  cleanup();
-  const { session } = await custody(false, true);
+it("asks native whether this launch follows a sign-out", async () => {
+  nativePaused(async () => true);
+  const { session } = await custody(false, "native");
   act(() => {
     session.publish({ status: "signed-out" });
   });
+  expect(invoke).toHaveBeenCalledWith("platform_key_sign_in_paused");
   expect(
     await screen.findByRole("button", { name: "Sign in with Moneta" }),
   ).toBeVisible();
-  expect(first.session.service.signIn).not.toHaveBeenCalled();
   expect(session.service.signIn).not.toHaveBeenCalled();
+});
+
+it("opens the browser sign-in when native can't say", async () => {
+  nativePaused(() => Promise.reject(new Error("not allowed")));
+  const { session } = await custody(false, "native");
+  act(() => {
+    session.publish({ status: "signed-out" });
+  });
+  expect(invoke).toHaveBeenCalledWith("platform_key_sign_in_paused");
+  expect(session.service.signIn).toHaveBeenCalledOnce();
 });
 
 it("opens the browser sign-in at a first launch", async () => {
