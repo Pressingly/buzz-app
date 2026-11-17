@@ -20,6 +20,8 @@ fn main() {
     configure_federated_identity();
     configure_key_custody();
     configure_enterprise_auth();
+    // askii_key.rs is inert without it.
+    println!("cargo:rerun-if-env-changed=BUZZ_BUILD_ASKII_URL");
     // Release builds enable the updater only when both values are supplied; its
     // `plugins.updater` config comes from the same values via `tauri build --config`.
     println!("cargo:rerun-if-env-changed=BUZZ_UPDATER_PUBLIC_KEY");
@@ -92,6 +94,10 @@ fn main() {
             "sign_out",
             "sign_out_wipe_refusal",
             "platform_key_sign_in_paused",
+            "askii_toolkit_credentials",
+            "askii_key_read",
+            "askii_key_save",
+            "askii_key_clear",
             "identity_prepare_remote_agent_authorization",
             "identity_sign_builderlab_binding",
             "federated_identity_snapshot",
