@@ -147,6 +147,12 @@ describe("toolkitKey", () => {
     ).toBeUndefined();
   });
 
+  it("reads a file saved with a byte order mark", () => {
+    expect(toolkitKey(`\uFEFF${credentials({})}`, preset, now)?.key).toBe(
+      TOOLKIT_KEY,
+    );
+  });
+
   it("keeps a key whose expiry Askii did not send", () => {
     expect(
       toolkitKey(credentials({ expires: "None" }), preset, now),

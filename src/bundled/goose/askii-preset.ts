@@ -108,7 +108,7 @@ export function toolkitKey(
 function parsedObject(text: string | null): Record<string, unknown> | null {
   if (!text) return null;
   try {
-    const value: unknown = JSON.parse(text);
+    const value: unknown = JSON.parse(text.replace(/^\uFEFF/u, ""));
     return value && typeof value === "object" && !Array.isArray(value)
       ? (value as Record<string, unknown>)
       : null;
