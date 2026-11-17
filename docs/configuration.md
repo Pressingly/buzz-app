@@ -224,8 +224,8 @@ server with `"signIn": "at-launch"` and no `BUZZ_NSEC_BACKUP_SERVICE_URL`.
   fetches `GET {adapterBase}/v1/identity/key` (Bearer session, answering
   `{nostr_pubkey, secret_key}`) natively, and installs that key the way a
   recovered key is installed, at the sign-in's commit point and before the
-  session is saved. Sign-in never hands the key to the webview or a log; the
-  upstream Settings export stays available.
+  session is saved. Sign-in never hands the key to the webview or a log, and
+  Settings shows no private key panel: the organization holds the key.
 - A custody build stores its sessions apart from builds without custody, so
   its first launch always signs in through the browser, where the key rules
   below apply. Revocation still ends the session at the adapter and at every

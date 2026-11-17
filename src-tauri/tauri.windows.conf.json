@@ -1,7 +1,7 @@
 {
-  "productName": "Buzz Foundation",
+  "productName": "Buzz",
   "bundle": {
-    "publisher": "local",
+    "publisher": "Moneta",
     "windows": { "nsis": { "installerHooks": "installer-hooks.nsh" } }
   },
   "app": {
