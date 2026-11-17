@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Buzz",
-  "version": "0.7.0",
+  "version": "0.7.2",
   "identifier": "xyz.moneta.buzz.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev:desktop --port 1430",
