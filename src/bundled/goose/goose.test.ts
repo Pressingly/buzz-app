@@ -120,6 +120,31 @@ describe("GooseProcess", () => {
     }
   });
 
+  it("starts goose on the Askii preset's key and seeds goose's defaults", async () => {
+    const fake = fakeSpawn();
+    const seed = vi.fn(async () => {});
+    await GooseProcess.start(fake.spawn, { cwd: "/work" }, async () => ({
+      env: { LITELLM_HOST: "https://askii.example", LITELLM_API_KEY: "sk-k" },
+      seed,
+    }));
+    expect(fake.geese[0]?.options.env).toMatchObject({
+      LITELLM_HOST: "https://askii.example",
+      LITELLM_API_KEY: "sk-k",
+    });
+    expect(seed).toHaveBeenCalledOnce();
+  });
+
+  it("still starts goose when seeding its defaults fails", async () => {
+    const fake = fakeSpawn();
+    await expect(
+      GooseProcess.start(fake.spawn, { cwd: "/work" }, async () => ({
+        env: {},
+        seed: () => Promise.reject(new Error("refused")),
+      })),
+    ).resolves.toBeDefined();
+    expect(fake.geese[0]?.killed).toBeFalsy();
+  });
+
   it("refuses a goose that cannot serve the Buzz tools", async () => {
     const fake = fakeSpawn({ http: false });
     await expect(

@@ -21,6 +21,8 @@ import {
   type ConfigValue,
   valuesOf,
 } from "../../features/agent-harness/acp/session";
+import { askiiPreset } from "./askii";
+import { ASKII_PROVIDER } from "./askii-preset";
 
 export type ConfigKey = Readonly<{
   name: string;
@@ -216,9 +218,10 @@ export class GooseSetup {
       const providerId = choice.provider.trim();
       const { defaults, providers } = await this.providers();
       await this.with(async (goose) => {
-        let modelId =
+        let modelId: string | undefined =
           choice.model.trim() ||
-          (providerId === defaults.provider ? defaults.model?.trim() : "");
+          (providerId === defaults.provider ? defaults.model?.trim() : "") ||
+          presetModel(providerId);
         if (!modelId) {
           // Goose stores per-provider choices separately from catalog metadata.
           const { value } = (await goose.request(
@@ -647,9 +650,10 @@ function provider(entry: Entry): Provider {
   const models = [...(entry.models ?? [])].sort(
     (a, b) => Number(Boolean(b.recommended)) - Number(Boolean(a.recommended)),
   );
+  const askii = entry.providerId === ASKII_PROVIDER && !!askiiPreset();
   const listed = {
     id: entry.providerId,
-    name: entry.providerName,
+    name: askii ? "Askii" : entry.providerName,
     description: entry.description ?? "",
     defaultModel: entry.defaultModel ?? "",
     configured: Boolean(entry.configured),
@@ -666,7 +670,13 @@ function provider(entry: Entry): Provider {
     // The exact ID: a catalog name can stand for several models.
     models: models.map((model) => ({ id: model.id, label: model.id })),
   };
-  return { ...listed, needs: needs(listed) };
+  return {
+    ...listed,
+    needs:
+      askii && !listed.configured
+        ? "Askii needs an API key. Paste one in Goose setup."
+        : needs(listed),
+  };
 }
 
 /** What `provider` still needs before it runs, or "" for nothing: a required
@@ -684,6 +694,10 @@ function needs(provider: Omit<Provider, "needs">) {
       : "";
   return step && `${provider.name} isn't set up in goose. ${step}`;
 }
+
+/** The Askii preset's model, for its provider in a preset build. */
+const presetModel = (providerId: string) =>
+  providerId === ASKII_PROVIDER ? (askiiPreset()?.model ?? "") : "";
 
 /** `ANTHROPIC_API_KEY` reads as `API key`, `OPENAI_HOST` as `Host`. */
 export function keyLabel(name: string) {

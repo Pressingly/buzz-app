@@ -1015,6 +1015,17 @@ describe("GooseRuntime", () => {
     },
   );
 
+  it("starts the agent's goose again after the Askii key changes", async () => {
+    const { deliver, fake, runtime } = setup();
+    await deliver(message("1", "@Gander first"));
+    await vi.waitFor(() => expect(fake.geese[0]?.turns).toHaveLength(1));
+    runtime.providerKeyChanged();
+    await vi.waitFor(() => expect(fake.geese[0]?.killed).toBe(true));
+    await deliver(message("2", "@Gander next"));
+    await vi.waitFor(() => expect(fake.geese[1]?.turns).toHaveLength(1));
+    expect(fake.geese).toHaveLength(2);
+  });
+
   it("runs a mention on the agent's thinking level", async () => {
     const { deliver, fake } = setup();
     await deliver(message("1", "@Gander think"), {

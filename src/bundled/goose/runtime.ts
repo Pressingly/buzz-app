@@ -206,6 +206,16 @@ export class GooseRuntime {
       if (!entry.config.provider.trim()) entry.sessions.reconfigure();
   }
 
+  /** Stops every agent's goose after the Askii key changes, which a running
+   * goose keeps from its start; each starts again on its next turn. */
+  providerKeyChanged() {
+    for (const entry of this.agents.values()) {
+      entry.goose.stop();
+      entry.worker?.stop();
+    }
+    this.defaultsChanged();
+  }
+
   private readonly retirements = new Map<string, Promise<void>>();
   async retire(pubkey: string) {
     let retiring = this.retirements.get(pubkey);

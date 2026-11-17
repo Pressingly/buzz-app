@@ -337,11 +337,18 @@ WebView2 download-bootstrapper defaults (network needed if WebView2 is absent).
 The job silently installs into a disposable runner directory and verifies the
 installed app executable, without launching the app.
 
-The Windows config pins `bundle.publisher` to `local`, the publisher Tauri derived
-from the identifier before 1.0, so an update still finds the install folder Tauri
-records under `Software\local\Buzz Foundation`. An update keeps existing shortcuts,
-so `src-tauri/installer-hooks.nsh` gives the Start menu and desktop shortcuts the
-current identifier as their AppUserModelID, which Windows shows notifications under.
+Pressingly fork: the Windows config installs as `Buzz` from publisher `Moneta`,
+which Tauri records under `Software\Moneta\Buzz`, so the toolkit installer can tell
+this build from Block's. This deliberately drops update continuity with
+`Buzz Foundation`/`local` installs; no Pressingly Windows build ever shipped under
+that name. Tauri keys the uninstall entry, the install folder and the shortcuts on the
+product name alone, so this build installs over Block's pre-1.0 `Buzz` (0.5.x). The
+supported setup is to uninstall any existing Buzz first, as on macOS, and the toolkit
+installer warns before replacing a Buzz it did not install. `scripts/moneta-namespace.sh`
+fails if an upstream rebase restores the upstream name or publisher. An update keeps
+existing shortcuts, so `src-tauri/installer-hooks.nsh` gives the Start menu and desktop
+shortcuts the current identifier as their AppUserModelID, which Windows shows
+notifications under.
 
 Linux reuses old Buzz's Ubuntu 24.04 recipe and guarded Wayland/GStreamer AppImage
 repair from `block/buzz` tag `desktop-v0.5.25`. Repacking tools and the type2 runtime

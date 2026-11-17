@@ -11,6 +11,7 @@ import type {
   ConfigOptions,
 } from "../../features/agent-harness/acp/session";
 import { errorMessage } from "../../features/agent-harness/acp/steps";
+import { askiiLaunch } from "./askii";
 import type {
   AcpHooks,
   ServeMcp,
@@ -179,11 +180,14 @@ export const GooseProcess = {
       onProcess?: (goose: AcpProcess) => void;
       agent?: Readonly<{ pubkey: string; relay: string }>;
     }>,
+    askii: () => ReturnType<typeof askiiLaunch> = askiiLaunch,
   ) => {
+    const preset = await askii();
     const goose = await AcpProcess.start(spawn, GOOSE, {
       ...launch,
       env: {
         ...databricks(),
+        ...preset.env,
         ...launch.env,
         ...(launch.protected && { GOOSE_DISABLE_SESSION_NAMING: "true" }),
       },
@@ -211,6 +215,8 @@ export const GooseProcess = {
           );
       }
       launch.signal?.throwIfAborted();
+      // A goose that cannot save defaults still runs agents that name a provider.
+      await preset.seed(goose, REQUEST_TIMEOUT_MS).catch(() => undefined);
       return goose;
     } catch (error) {
       // Rejects once it has exited or `STOP_TIMEOUT_MS` has passed.

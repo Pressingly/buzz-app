@@ -170,11 +170,9 @@ fn decode(issued: &Issued) -> Result<Zeroizing<[u8; 32]>, Failure> {
         }
     };
     let mut secret = Zeroizing::new([0u8; 32]);
-    for (byte, pair) in secret
-        .iter_mut()
-        .zip(issued.secret_key.as_bytes().chunks_exact(2))
-    {
-        *byte = nibble(pair[0]) << 4 | nibble(pair[1]);
+    let (pairs, _) = issued.secret_key.as_bytes().as_chunks::<2>();
+    for (byte, [high, low]) in secret.iter_mut().zip(pairs) {
+        *byte = nibble(*high) << 4 | nibble(*low);
     }
     Ok(secret)
 }
