@@ -13,6 +13,7 @@ Build defaults are readable binary data, **never secret storage**.
 | `BUZZ_BUILDERLAB_APPS_DOMAIN` | Shared frontend/native build: exact Apps cookie domain paired with the login origin for native viewer SSO; no runtime override. |
 | `BUZZ_DEFAULT_COMMUNITY_URL` | Packaged frontend build: secure relay origin to select once, after identity setup, only when this viewer has no saved community record. Saved choices, including Personal space, always win. Unset in OSS builds. |
 | `BUZZ_DATABRICKS_HOST` | Frontend build and dev server: `https://` Databricks workspace URL passed as `DATABRICKS_HOST` to every bundled `goose-acp`, which then prefers it to the host in goose's config. Unset in OSS builds. See [Databricks host](#databricks-host). |
+| `BUZZ_BUILD_ASKII_URL`, `BUZZ_BUILD_ASKII_MODEL` | Frontend and native build, process environment only: the Askii preset for the bundled goose (Pressingly fork). Unset keeps upstream behavior. See [Askii preset](#askii-preset-build-inputs-pressingly-fork). |
 | `BUZZ_RELAY_URL` | Live development broker's default community, not an agent relay override or a packaged default. |
 | `BUZZ_BUILD_AUTO_CONNECT_DEFAULT_RELAY` | Presence-only alias for fresh-viewer community selection in live development only. Saved viewer choice wins. |
 | `BUZZ_BUILD_FEDERATED_IDENTITY_CONFIG` | Native and frontend build: sign-in servers added to the built-in one, each with its adapter prefix and community hosts; empty opts out. See below. |
@@ -236,6 +237,40 @@ server with `"signIn": "at-launch"` and no `BUZZ_NSEC_BACKUP_SERVICE_URL`.
 - Create, import and legacy import refuse, the launch screen has no Not now,
   and an `email_verification_required` login refusal is named for the person.
   A restored session whose key is missing asks to sign in again.
+
+## Askii preset build inputs (Pressingly fork)
+
+`BUZZ_BUILD_ASKII_URL=https://api.askii.ai` points the bundled goose's LiteLLM
+provider at that Askii platform, shown as **Askii**; `BUZZ_BUILD_ASKII_MODEL`
+names its model (default `gpt-5-mini`). The foss-bundle installer supplies the
+sandbox or prod URL from its `BUILD_ENV`. The URL must be `https://` without
+credentials; a trailing `/v1` is dropped, as goose adds it. A model without a
+URL, or an invalid URL, fails the build. Unset keeps upstream behavior, and the
+native key commands answer nothing.
+
+- Every `goose-acp` starts with `LITELLM_HOST` and `LITELLM_API_KEY` from the
+  first usable key: a key pasted in Goose setup, kept in the keychain under
+  `xyz.moneta.buzz.desktop.askii-key`, which always goes to the build's URL;
+  else `api_key` in the AI Productivity Toolkit's `~/.askii/credentials.json`.
+  Clearing the pasted key falls back to the toolkit's.
+- The toolkit's key goes to its `platform_url` only when that is `https://` and
+  its host is the build URL's host or ends in `.askii.ai`; otherwise to the
+  build's URL. It is skipped once its `expires` has passed or cannot be read:
+  `""` and `None` mean no expiry, digits are epoch seconds or milliseconds, a
+  date is valid through the end of that day UTC, and a time without an offset
+  is UTC.
+- Like `DATABRICKS_HOST` and `BUZZ_AGENT_CONNECTION`, these variables stay in
+  goose's environment, so the commands and extensions goose starts inherit
+  `LITELLM_API_KEY` too.
+- With a key and no default provider or model in goose's config, Buzz saves
+  `litellm` and the model as goose's defaults through goose itself, as the
+  Goose defaults dialog would. A default already saved is kept. Saving Askii
+  in that dialog without a model keeps a litellm default model already saved,
+  else saves the build's model.
+- Saving, replacing or clearing the pasted key stops each agent's goose when
+  that changes the key or host goose would start with; it starts again on its
+  next turn. Sign out clears the pasted key.
+- Askii keys carry no MCP tools; the preset sets only the model provider.
 
 ## Default channel build input (Pressingly fork)
 

@@ -471,6 +471,30 @@ describe("GooseSetup", () => {
     expect(await goose.models("hidden")).toEqual([]);
   });
 
+  it("names LiteLLM Askii in a preset build, which takes a pasted key", async () => {
+    const litellm = {
+      providerId: "litellm",
+      providerName: "LiteLLM",
+      configured: false,
+      visibleInSetup: true,
+      configKeys: [{ name: "LITELLM_API_KEY", required: true, secret: true }],
+    };
+    const named = async () =>
+      (await setup({ providers: [litellm] }).setup.providers()).providers.find(
+        (provider) => provider.id === "litellm",
+      );
+    expect(await named()).toMatchObject({ name: "LiteLLM" });
+    vi.stubEnv("VITE_BUZZ_ASKII_URL", "https://api.askii.example");
+    try {
+      expect(await named()).toMatchObject({
+        name: "Askii",
+        needs: "Askii needs an API key. Paste one in Goose setup.",
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("offers no catalog models for a provider that is not set up, and says what it needs", async () => {
     const saved = new Map<string, Set<string>>();
     const { setup: goose } = setup({
@@ -975,6 +999,51 @@ it("checks Goose config readiness and writes defaults through Goose", async () =
     blocking: false,
   });
   expect(fake.geese.every((process) => process.killed)).toBe(true);
+});
+
+it("saves the Askii preset's model when its provider is saved without one", async () => {
+  const litellm = {
+    providerId: "litellm",
+    providerName: "LiteLLM",
+    defaultModel: "gpt-4o-mini",
+    configured: true,
+    visibleInSetup: true,
+  };
+  vi.stubEnv("VITE_BUZZ_ASKII_URL", "https://api.askii.example");
+  try {
+    const { setup: goose } = setup({ providers: [litellm], defaults: {} });
+    await goose.saveDefaults({ provider: "litellm", model: "" });
+    expect((await goose.providers()).defaults).toEqual({
+      provider: "litellm",
+      model: "gpt-5-mini",
+    });
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
+
+it("keeps a litellm default model already saved when Askii is saved without one", async () => {
+  const litellm = {
+    providerId: "litellm",
+    providerName: "LiteLLM",
+    defaultModel: "gpt-4o-mini",
+    configured: true,
+    visibleInSetup: true,
+  };
+  vi.stubEnv("VITE_BUZZ_ASKII_URL", "https://api.askii.example");
+  try {
+    const { setup: goose } = setup({
+      providers: [litellm],
+      defaults: { providerId: "litellm", modelId: "claude-sonnet" },
+    });
+    await goose.saveDefaults({ provider: "litellm", model: "" });
+    expect((await goose.providers()).defaults).toEqual({
+      provider: "litellm",
+      model: "claude-sonnet",
+    });
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });
 
 it("requires a configured default provider and recovers after setup", async () => {

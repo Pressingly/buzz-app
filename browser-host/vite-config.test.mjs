@@ -165,6 +165,30 @@ it("loads the broker's Vite config without native-compatibility warnings", () =>
               );
             }
             delete process.env.BUZZ_DATABRICKS_HOST;
+            // The Askii preset compiles a normalized origin and its model; an
+            // unset URL keeps upstream's goose, and bad input fails the build.
+            for (const [url, model, expectedUrl, expectedModel] of [
+              [undefined, undefined, '', ''],
+              ['https://api.askii.example/v1/', undefined, 'https://api.askii.example', 'gpt-5-mini'],
+              ['https://api.askii.example', 'gpt-5', 'https://api.askii.example', 'gpt-5'],
+            ]) {
+              if (url === undefined) delete process.env.BUZZ_BUILD_ASKII_URL;
+              else process.env.BUZZ_BUILD_ASKII_URL = url;
+              if (model === undefined) delete process.env.BUZZ_BUILD_ASKII_MODEL;
+              else process.env.BUZZ_BUILD_ASKII_MODEL = model;
+              const result = await loadConfigFromFile({ command: 'build', mode: 'production' }, configFile);
+              assert.equal(result.config.define['import.meta.env.VITE_BUZZ_ASKII_URL'], JSON.stringify(expectedUrl));
+              assert.equal(result.config.define['import.meta.env.VITE_BUZZ_ASKII_MODEL'], JSON.stringify(expectedModel));
+            }
+            delete process.env.BUZZ_BUILD_ASKII_MODEL;
+            for (const invalid of ['http://api.askii.example', 'https://user:secret@api.askii.example']) {
+              process.env.BUZZ_BUILD_ASKII_URL = invalid;
+              await assert.rejects(
+                loadConfigFromFile({ command: 'build', mode: 'production' }, configFile),
+                error => !String(error).includes('secret') && /BUZZ_BUILD_ASKII_URL/.test(String(error)),
+              );
+            }
+            delete process.env.BUZZ_BUILD_ASKII_URL;
             // A fresh checkout uses production for both dev and packaged frontends.
             // Explicit empty values retain the deployment opt-out.
             for (const local of ['', 'BUZZ_BUILDERLAB_URL=']) {
