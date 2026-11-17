@@ -220,6 +220,7 @@ export class GooseSetup {
       await this.with(async (goose) => {
         let modelId =
           choice.model.trim() ||
+          presetModel(providerId) ||
           (providerId === defaults.provider ? defaults.model?.trim() : "");
         if (!modelId) {
           // Goose stores per-provider choices separately from catalog metadata.
@@ -693,6 +694,10 @@ function needs(provider: Omit<Provider, "needs">) {
       : "";
   return step && `${provider.name} isn't set up in goose. ${step}`;
 }
+
+/** The Askii preset's model, for its provider in a preset build. */
+const presetModel = (providerId: string) =>
+  providerId === ASKII_PROVIDER ? (askiiPreset()?.model ?? "") : "";
 
 /** `ANTHROPIC_API_KEY` reads as `API key`, `OPENAI_HOST` as `Host`. */
 export function keyLabel(name: string) {

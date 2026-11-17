@@ -1001,6 +1001,27 @@ it("checks Goose config readiness and writes defaults through Goose", async () =
   expect(fake.geese.every((process) => process.killed)).toBe(true);
 });
 
+it("saves the Askii preset's model when its provider is saved without one", async () => {
+  const litellm = {
+    providerId: "litellm",
+    providerName: "LiteLLM",
+    defaultModel: "gpt-4o-mini",
+    configured: true,
+    visibleInSetup: true,
+  };
+  vi.stubEnv("VITE_BUZZ_ASKII_URL", "https://api.askii.example");
+  try {
+    const { setup: goose } = setup({ providers: [litellm], defaults: {} });
+    await goose.saveDefaults({ provider: "litellm", model: "" });
+    expect((await goose.providers()).defaults).toEqual({
+      provider: "litellm",
+      model: "gpt-5-mini",
+    });
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
+
 it("requires a configured default provider and recovers after setup", async () => {
   const { setup: goose } = setup({ defaults: {} });
   await goose.check();
