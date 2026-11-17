@@ -249,17 +249,26 @@ URL, or an invalid URL, fails the build. Unset keeps upstream behavior, and the
 native key commands answer nothing.
 
 - Every `goose-acp` starts with `LITELLM_HOST` and `LITELLM_API_KEY` from the
-  first usable key: `api_key` in the AI Productivity Toolkit's
-  `~/.askii/credentials.json` (with its `platform_url`, when that is an
-  `https://` URL), unless its `expires` has passed or cannot be read (`""` and
-  `None` mean no expiry; a time without an offset is UTC); else a key pasted in
-  Goose setup, kept in the keychain under
-  `xyz.moneta.buzz.desktop.askii-key`, which always goes to the build's URL.
+  first usable key: a key pasted in Goose setup, kept in the keychain under
+  `xyz.moneta.buzz.desktop.askii-key`, which always goes to the build's URL;
+  else `api_key` in the AI Productivity Toolkit's `~/.askii/credentials.json`.
+  Clearing the pasted key falls back to the toolkit's.
+- The toolkit's key goes to its `platform_url` only when that is `https://` and
+  its host is the build URL's host or ends in `.askii.ai`; otherwise to the
+  build's URL. It is skipped once its `expires` has passed or cannot be read:
+  `""` and `None` mean no expiry, digits are epoch seconds or milliseconds, a
+  date is valid through the end of that day UTC, and a time without an offset
+  is UTC.
+- Like `DATABRICKS_HOST` and `BUZZ_AGENT_CONNECTION`, these variables stay in
+  goose's environment, so the commands and extensions goose starts inherit
+  `LITELLM_API_KEY` too.
 - With a key and no default provider or model in goose's config, Buzz saves
   `litellm` and the model as goose's defaults through goose itself, as the
-  Goose defaults dialog would. A default already saved is kept.
-- Saving, replacing or clearing the pasted key stops each agent's goose, which
-  starts again on its next turn with the current key. Sign out clears it.
+  Goose defaults dialog would. A default already saved is kept. Saving Askii
+  in that dialog without a model saves the build's model.
+- Saving, replacing or clearing the pasted key stops each agent's goose when
+  that changes the key or host goose would start with; it starts again on its
+  next turn. Sign out clears the pasted key.
 - Askii keys carry no MCP tools; the preset sets only the model provider.
 
 ## Default channel build input (Pressingly fork)

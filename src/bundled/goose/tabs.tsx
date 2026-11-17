@@ -689,8 +689,8 @@ export function createTabs({
       <AskiiKeyField
         preset={askii}
         disabled={props.disabled}
-        onChanged={() => {
-          runtime.providerKeyChanged();
+        onChanged={(keyChanged) => {
+          if (keyChanged) runtime.providerKeyChanged();
           void setup.check().then(props.onSaved);
         }}
       />

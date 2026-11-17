@@ -6,6 +6,7 @@ import {
   compiledPreset,
   expiryOf,
   resolveAskiiKey,
+  sameAskiiKey,
   toolkitKey,
 } from "./askii-preset";
 
@@ -105,8 +106,32 @@ describe("expiryOf", () => {
     expect(expiryOf(1_800_000_000_000)).toBe(1_800_000_000_000);
   });
 
+  it("reads an all-digits string as epoch seconds or milliseconds", () => {
+    expect(expiryOf("1800000000")).toBe(1_800_000_000_000);
+    expect(expiryOf(" 1800000000000 ")).toBe(1_800_000_000_000);
+  });
+
+  it("reads a date as valid through the end of that day, UTC", () => {
+    expect(expiryOf("2027-02-15")).toBe(Date.parse("2027-02-15T23:59:59.999Z"));
+    expect(expiryOf("2027-02-30")).toBeNull();
+  });
+
+  it("reads a space-separated time as UTC", () => {
+    expect(expiryOf("2027-02-15 10:00:00")).toBe(
+      Date.parse("2027-02-15T10:00:00Z"),
+    );
+  });
+
   it("marks anything else unreadable", () => {
-    for (const bad of ["soon", {}, [], true, Number.NaN])
+    for (const bad of [
+      "soon",
+      "Feb 15 2027",
+      "2027-02",
+      {},
+      [],
+      true,
+      Number.NaN,
+    ])
       expect(expiryOf(bad)).toBeNull();
   });
 });
@@ -116,7 +141,7 @@ describe("toolkitKey", () => {
     expect(
       toolkitKey(
         credentials({
-          platform_url: "https://api.sandbox.askii.example",
+          platform_url: "https://api.sandbox.askii.ai/v1",
           expires: "2027-02-15T10:00:00Z",
           user_id: "u",
         }),
@@ -125,14 +150,34 @@ describe("toolkitKey", () => {
       ),
     ).toEqual({
       key: TOOLKIT_KEY,
-      url: "https://api.sandbox.askii.example",
+      url: "https://api.sandbox.askii.ai",
       source: "toolkit",
       expires: Date.parse("2027-02-15T10:00:00Z"),
     });
   });
 
-  it("falls back to the build's URL when platform_url is absent or unsafe", () => {
-    for (const platform_url of [undefined, "", "http://localhost:4000", 42])
+  it("accepts a platform_url on the build's host", () => {
+    expect(
+      toolkitKey(
+        credentials({ platform_url: "https://api.askii.example/v1" }),
+        preset,
+        now,
+      )?.url,
+    ).toBe("https://api.askii.example");
+  });
+
+  it("falls back to the build's URL when platform_url is absent, unsafe or not Askii's", () => {
+    for (const platform_url of [
+      undefined,
+      "",
+      "http://localhost:4000",
+      "http://api.askii.ai",
+      "https://evil.example",
+      "https://notaskii.ai",
+      "https://askii.ai.evil.example",
+      "https://evilaskii.ai",
+      42,
+    ])
       expect(toolkitKey(credentials({ platform_url }), preset, now)?.url).toBe(
         preset.url,
       );
@@ -177,24 +222,28 @@ describe("toolkitKey", () => {
 });
 
 describe("resolveAskiiKey", () => {
-  it("prefers the toolkit's key to a pasted one", () => {
+  it("prefers a pasted key to the toolkit's", () => {
     expect(
       resolveAskiiKey(
         preset,
         { toolkit: credentials({}), pasted: PASTED_KEY },
         now,
       )?.source,
-    ).toBe("toolkit");
+    ).toBe("pasted");
   });
 
-  it("uses the pasted key, at the build's URL, when the file is unusable", () => {
+  it("falls back to the toolkit's key without a pasted one", () => {
+    for (const pasted of [null, "short"])
+      expect(
+        resolveAskiiKey(preset, { toolkit: credentials({}), pasted }, now),
+      ).toMatchObject({ key: TOOLKIT_KEY, source: "toolkit" });
+  });
+
+  it("sends a pasted key to the build's URL, whatever the file names", () => {
     for (const toolkit of [
       null,
       "not json",
-      credentials({
-        expires: "2020-01-01T00:00:00Z",
-        platform_url: "https://elsewhere.example",
-      }),
+      credentials({ platform_url: "https://api.sandbox.askii.ai" }),
     ])
       expect(
         resolveAskiiKey(preset, { toolkit, pasted: ` ${PASTED_KEY} ` }, now),
@@ -208,6 +257,23 @@ describe("resolveAskiiKey", () => {
     expect(
       resolveAskiiKey(preset, { toolkit: null, pasted: "short" }, now),
     ).toBeUndefined();
+  });
+});
+
+describe("sameAskiiKey", () => {
+  it("compares the key and host goose starts with", () => {
+    const pasted = {
+      key: PASTED_KEY,
+      url: preset.url,
+      source: "pasted",
+    } as const;
+    expect(sameAskiiKey(pasted, { ...pasted, source: "toolkit" })).toBe(true);
+    expect(sameAskiiKey(undefined, undefined)).toBe(true);
+    expect(sameAskiiKey(pasted, undefined)).toBe(false);
+    expect(sameAskiiKey(pasted, { ...pasted, key: TOOLKIT_KEY })).toBe(false);
+    expect(sameAskiiKey(pasted, { ...pasted, url: "https://x.askii.ai" })).toBe(
+      false,
+    );
   });
 });
 

@@ -63,9 +63,15 @@ const KEY = /^[\x21-\x7e]{8,512}$/u;
 /** A key that can go into goose's environment as is. */
 export const validKey = (key: string): boolean => KEY.test(key);
 
-/** `expires` as `mpass-login.sh` writes it: an ISO time (UTC when it names no
- * offset), or `""`/`"None"` when Askii sent none. Undefined means no expiry,
- * null an unreadable one. */
+const DIGITS = /^\d+$/u;
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/u;
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/u;
+const HAS_ZONE = /(?:Z|[+-]\d{2}:?\d{2})$/iu;
+
+/** `expires` as the toolkit's login scripts write it: an ISO time (UTC when it
+ * names no offset), a date (valid through that day, UTC), epoch seconds or
+ * milliseconds, or `""`/`"None"` when Askii sent none. Undefined means no
+ * expiry, null an unreadable one. */
 export function expiryOf(value: unknown): number | undefined | null {
   if (value === undefined || value === null) return undefined;
   if (typeof value === "number")
@@ -73,15 +79,48 @@ export function expiryOf(value: unknown): number | undefined | null {
   if (typeof value !== "string") return null;
   const text = value.trim();
   if (text === "" || text === "None") return undefined;
-  const zoned = /(?:Z|[+-]\d{2}:?\d{2})$/iu.test(text) ? text : `${text}Z`;
-  const time = Date.parse(zoned);
+  if (DIGITS.test(text)) return epochMs(Number(text));
+  const date = DATE_ONLY.exec(text);
+  if (date)
+    return endOfDayUtc(Number(date[1]), Number(date[2]), Number(date[3]));
+  if (!ISO_TIME.test(text)) return null;
+  // The standard's own form (`T`, at most milliseconds), which every engine
+  // reads alike; Python writes a space or microseconds.
+  const iso = text.replace(" ", "T").replace(/(\.\d{3})\d+/u, "$1");
+  const time = Date.parse(HAS_ZONE.test(iso) ? iso : `${iso}Z`);
   return Number.isNaN(time) ? null : time;
 }
 
 const epochMs = (value: number) => (value < 1e12 ? value * 1000 : value);
 
+/** Built from parts, so every JavaScript engine reads it alike. */
+function endOfDayUtc(year: number, month: number, day: number): number | null {
+  const start = Date.UTC(year, month - 1, day);
+  const parsed = new Date(start);
+  const real =
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day;
+  return real ? Date.UTC(year, month - 1, day + 1) - 1 : null;
+}
+
+/** `platform_url` names an Askii host: the build's own, or one under
+ * `askii.ai`, so a stray file cannot send the key elsewhere. */
+export function trustedPlatform(
+  raw: unknown,
+  preset: AskiiPreset,
+): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const origin = askiiOrigin(raw);
+  if (!origin) return undefined;
+  const host = new URL(origin).hostname;
+  const trusted =
+    host === new URL(preset.url).hostname || host.endsWith(".askii.ai");
+  return trusted ? origin : undefined;
+}
+
 /** The toolkit's key while it is unexpired, with its own platform URL when
- * that is a valid Askii origin, else the build's. */
+ * that is a trusted Askii origin, else the build's. */
 export function toolkitKey(
   text: string | null,
   preset: AskiiPreset,
@@ -93,13 +132,9 @@ export function toolkitKey(
   const expires = expiryOf(credentials?.expires);
   if (expires === null || (expires !== undefined && expires <= now))
     return undefined;
-  const platform =
-    typeof credentials?.platform_url === "string"
-      ? askiiOrigin(credentials.platform_url)
-      : undefined;
   return {
     key: key.trim(),
-    url: platform ?? preset.url,
+    url: trustedPlatform(credentials?.platform_url, preset) ?? preset.url,
     source: "toolkit",
     ...(expires !== undefined && { expires }),
   };
@@ -127,13 +162,19 @@ export function pastedKey(
   return validKey(key) ? { key, url: preset.url, source: "pasted" } : undefined;
 }
 
-/** The toolkit's key first, else the pasted one. */
+/** A pasted key first, as the person chose it; else the toolkit's. */
 export const resolveAskiiKey = (
   preset: AskiiPreset,
   sources: Readonly<{ toolkit: string | null; pasted: string | null }>,
   now: number,
 ): AskiiKey | undefined =>
-  toolkitKey(sources.toolkit, preset, now) ?? pastedKey(sources.pasted, preset);
+  pastedKey(sources.pasted, preset) ?? toolkitKey(sources.toolkit, preset, now);
+
+/** Whether goose would start with another key or host. */
+export const sameAskiiKey = (
+  a: AskiiKey | undefined,
+  b: AskiiKey | undefined,
+): boolean => a?.key === b?.key && a?.url === b?.url;
 
 /** What goose's LiteLLM provider reads from its environment. */
 export const askiiEnv = (key: AskiiKey): Record<string, string> => ({

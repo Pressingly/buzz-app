@@ -69,11 +69,9 @@ describe("askiiKeyStatus", () => {
       now,
     );
     expect(status).toEqual({
-      active: {
-        source: "toolkit",
-        expires: Date.parse("2027-01-01T00:00:00Z"),
-      },
+      active: { source: "pasted" },
       pastedSaved: true,
+      toolkitUsable: true,
     });
     expect(JSON.stringify(status)).not.toContain("sk-");
   });
@@ -81,6 +79,32 @@ describe("askiiKeyStatus", () => {
   it("reports no key", async () => {
     expect(await askiiKeyStatus(preset, store(null, null), now)).toEqual({
       pastedSaved: false,
+      toolkitUsable: false,
+    });
+  });
+});
+
+describe("askiiKeyStatus with only the toolkit's key", () => {
+  it("names the toolkit and its expiry", async () => {
+    expect(
+      await askiiKeyStatus(
+        preset,
+        store(
+          JSON.stringify({
+            api_key: TOOLKIT_KEY,
+            expires: "2027-01-01T00:00:00Z",
+          }),
+          null,
+        ),
+        now,
+      ),
+    ).toEqual({
+      active: {
+        source: "toolkit",
+        expires: Date.parse("2027-01-01T00:00:00Z"),
+      },
+      pastedSaved: false,
+      toolkitUsable: true,
     });
   });
 });

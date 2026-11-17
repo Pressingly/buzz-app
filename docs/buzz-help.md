@@ -651,9 +651,9 @@ available rather than silently discarding it.
   Stop control; earlier groups remain readable history. In Codex DMs, an accepted
   follow-up takes over the live indicator; separate threads keep their own.
 - Some organization builds set Goose up for Askii: Goose starts on Askii with
-  the key the AI Productivity Toolkit installed, or, when that key is missing or
-  expired, a key pasted under **Askii API key** in Goose setup (create one in
-  Askii under Connectors & Apps > Workspace Apps > API keys). Buzz keeps a
+  a key pasted under **Askii API key** in Goose setup (create one in Askii under
+  Connectors & Apps > Workspace Apps > API keys), or, without one, the key the
+  AI Productivity Toolkit installed. Buzz keeps a
   pasted key in the system keychain; **Clear saved key** and Sign out remove
   it. Askii gives Goose a model only, no extra tools.
 - A Goose agent's Activity lists the sessions Buzz recorded on this device for

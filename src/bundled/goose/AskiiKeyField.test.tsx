@@ -40,7 +40,7 @@ it("saves a pasted key and tells the caller", async () => {
   await user.type(screen.getByLabelText("Askii API key"), PASTED_KEY);
   await user.click(screen.getByRole("button", { name: "Save key" }));
   expect(store.savePasted).toHaveBeenCalledWith(PASTED_KEY);
-  expect(onChanged).toHaveBeenCalledOnce();
+  expect(onChanged).toHaveBeenCalledExactlyOnceWith(true);
   expect(
     await screen.findByText("Using the key you saved on this computer."),
   ).toBeVisible();
@@ -56,7 +56,7 @@ it("clears a saved key", async () => {
     await screen.findByRole("button", { name: "Clear saved key" }),
   );
   expect(store.clearPasted).toHaveBeenCalledOnce();
-  expect(onChanged).toHaveBeenCalledOnce();
+  expect(onChanged).toHaveBeenCalledExactlyOnceWith(true);
   await waitFor(() =>
     expect(
       screen.queryByRole("button", { name: "Clear saved key" }),
@@ -76,8 +76,38 @@ it("names the toolkit's key when it is in use", async () => {
     />,
   );
   expect(
-    await screen.findByText("Using the key from the AI Productivity Toolkit."),
+    await screen.findByText(
+      "Using the key from the AI Productivity Toolkit. A key you paste here is used instead.",
+    ),
   ).toBeVisible();
+});
+
+it("falls back to the toolkit's key once the pasted one is cleared", async () => {
+  const user = userEvent.setup();
+  const store = memoryStore(
+    JSON.stringify({ api_key: "sk-toolkit-012345" }),
+    PASTED_KEY,
+  );
+  render(<AskiiKeyField preset={preset} store={store} onChanged={() => {}} />);
+  expect(
+    await screen.findByText(
+      "Using the key you saved on this computer. Clear it to use the AI Productivity Toolkit's key.",
+    ),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Clear saved key" }));
+  expect(
+    await screen.findByText(/^Using the key from the AI Productivity Toolkit/),
+  ).toBeVisible();
+});
+
+it("reports no key change when the saved key is saved again", async () => {
+  const user = userEvent.setup();
+  const store = memoryStore(null, PASTED_KEY);
+  const onChanged = vi.fn();
+  render(<AskiiKeyField preset={preset} store={store} onChanged={onChanged} />);
+  await user.type(await screen.findByLabelText("Askii API key"), PASTED_KEY);
+  await user.click(screen.getByRole("button", { name: "Replace key" }));
+  await waitFor(() => expect(onChanged).toHaveBeenCalledExactlyOnceWith(false));
 });
 
 it("shows a refused save", async () => {

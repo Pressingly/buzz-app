@@ -8,21 +8,24 @@ import {
   type AskiiKeyStatus,
   type AskiiStore,
   askiiKeyStatus,
+  currentAskiiKey,
   nativeAskiiStore,
 } from "./askii";
-import type { AskiiPreset } from "./askii-preset";
+import { type AskiiPreset, sameAskiiKey } from "./askii-preset";
 
 const CREATE_STEPS =
   "Create one in Askii under Connectors & Apps > Workspace Apps > API keys.";
 
 export function statusText(status: AskiiKeyStatus): string {
   const { active } = status;
+  if (active?.source === "pasted")
+    return status.toolkitUsable
+      ? "Using the key you saved on this computer. Clear it to use the AI Productivity Toolkit's key."
+      : "Using the key you saved on this computer.";
   if (active?.source === "toolkit")
     return active.expires === undefined
-      ? "Using the key from the AI Productivity Toolkit."
-      : `Using the key from the AI Productivity Toolkit, valid until ${new Date(active.expires).toLocaleDateString()}.`;
-  if (active?.source === "pasted")
-    return "Using the key you saved on this computer.";
+      ? "Using the key from the AI Productivity Toolkit. A key you paste here is used instead."
+      : `Using the key from the AI Productivity Toolkit, valid until ${new Date(active.expires).toLocaleDateString()}. A key you paste here is used instead.`;
   return `Paste an Askii API key. ${CREATE_STEPS}`;
 }
 
@@ -33,7 +36,8 @@ export function AskiiKeyField({
   store = nativeAskiiStore,
 }: Readonly<{
   preset: AskiiPreset;
-  onChanged(): void;
+  /** `keyChanged` says whether goose would now start with another key. */
+  onChanged(keyChanged: boolean): void;
   disabled?: boolean;
   store?: AskiiStore;
 }>) {
@@ -57,10 +61,12 @@ export function AskiiKeyField({
     setBusy(true);
     setError("");
     try {
+      const before = await currentAskiiKey(preset, store);
       await write();
+      const after = await currentAskiiKey(preset, store);
       setDraft("");
       setRound((value) => value + 1);
-      onChanged();
+      onChanged(!sameAskiiKey(before, after));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {

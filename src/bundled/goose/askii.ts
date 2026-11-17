@@ -10,6 +10,7 @@ import {
   askiiEnv,
   compiledPreset,
   resolveAskiiKey,
+  toolkitKey,
 } from "./askii-preset";
 
 export type AskiiStore = Readonly<{
@@ -57,6 +58,8 @@ export async function currentAskiiKey(
 export type AskiiKeyStatus = Readonly<{
   active?: Pick<AskiiKey, "source" | "expires">;
   pastedSaved: boolean;
+  /** Whether the toolkit's key would be used without the pasted one. */
+  toolkitUsable: boolean;
 }>;
 
 /** Which key goose would use, for the settings, without the key itself. */
@@ -75,6 +78,7 @@ export async function askiiKeyStatus(
       },
     }),
     pastedSaved: sources.pasted !== null,
+    toolkitUsable: toolkitKey(sources.toolkit, preset, now) !== undefined,
   };
 }
 
