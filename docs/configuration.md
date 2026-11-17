@@ -265,7 +265,8 @@ native key commands answer nothing.
 - With a key and no default provider or model in goose's config, Buzz saves
   `litellm` and the model as goose's defaults through goose itself, as the
   Goose defaults dialog would. A default already saved is kept. Saving Askii
-  in that dialog without a model saves the build's model.
+  in that dialog without a model keeps a litellm default model already saved,
+  else saves the build's model.
 - Saving, replacing or clearing the pasted key stops each agent's goose when
   that changes the key or host goose would start with; it starts again on its
   next turn. Sign out clears the pasted key.

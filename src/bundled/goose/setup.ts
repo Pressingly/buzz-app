@@ -218,10 +218,10 @@ export class GooseSetup {
       const providerId = choice.provider.trim();
       const { defaults, providers } = await this.providers();
       await this.with(async (goose) => {
-        let modelId =
+        let modelId: string | undefined =
           choice.model.trim() ||
-          presetModel(providerId) ||
-          (providerId === defaults.provider ? defaults.model?.trim() : "");
+          (providerId === defaults.provider ? defaults.model?.trim() : "") ||
+          presetModel(providerId);
         if (!modelId) {
           // Goose stores per-provider choices separately from catalog metadata.
           const { value } = (await goose.request(
