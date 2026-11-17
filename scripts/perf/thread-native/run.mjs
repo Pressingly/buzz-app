@@ -140,7 +140,7 @@ try {
       "--no-watch",
       "--config",
       JSON.stringify({
-        identifier: "dev.local.buzz.foundation.thread-perf",
+        identifier: "xyz.moneta.buzz.foundation.thread-perf",
         build: { devUrl: host, beforeDevCommand: "" },
       }),
     ],

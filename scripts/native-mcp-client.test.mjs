@@ -5,7 +5,7 @@ import { startRelay } from "./native-mcp-client.mjs";
 
 // Per-run identifiers, so concurrent runs cannot answer for each other.
 const testIdentifier = () =>
-  `dev.local.buzz.foundation.nexus-test-${randomBytes(6).toString("hex")}`;
+  `xyz.moneta.buzz.foundation.nexus-test-${randomBytes(6).toString("hex")}`;
 const identifier = testIdentifier();
 const other = testIdentifier();
 const instance = {

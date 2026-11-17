@@ -703,7 +703,7 @@ mod tests {
 
     #[test]
     fn locates_the_file_beside_profiles_unless_overridden() {
-        let home = Path::new("/data/xyz.block.buzz.desktop");
+        let home = Path::new("/data/xyz.moneta.buzz.desktop");
         assert_eq!(path(home, None).unwrap(), home.join("managed-plugins.json"));
         assert_eq!(
             path(home, Some("".into())).unwrap(),

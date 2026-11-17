@@ -52,7 +52,7 @@ export function options(args, names) {
 // Development launches keep their own app storage, copied once from the
 // installed app's, so they never take or block it, but share its Agents folder
 // (see `src-tauri/src/sign_out/legacy_identifier.rs`).
-const DEV_IDENTIFIER = "xyz.block.buzz.desktop.dev";
+const DEV_IDENTIFIER = "xyz.moneta.buzz.desktop.dev";
 
 export function desktopOverlay(root) {
   const config = { identifier: DEV_IDENTIFIER };
@@ -69,7 +69,7 @@ export function desktopOverlay(root) {
 export function nativeMcpInstance(root) {
   const digest = createHash("sha256").update(root, "utf8").digest("hex");
   return {
-    identifier: `dev.local.buzz.foundation.nexus-test-${digest.slice(0, 12)}`,
+    identifier: `xyz.moneta.buzz.foundation.nexus-test-${digest.slice(0, 12)}`,
     port: 20000 + Number(BigInt(`0x${digest}`) % 400n) * 100,
   };
 }

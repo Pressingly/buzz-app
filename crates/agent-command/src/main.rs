@@ -239,7 +239,7 @@ fn advertisements() -> Result<PathBuf> {
 }
 fn private_directory(name: &str) -> Result<PathBuf> {
     let home = std::env::home_dir().ok_or("No home directory")?;
-    let directory = home.join(".buzz-foundation").join(name);
+    let directory = home.join(".moneta-buzz").join(name);
     let mut builder = std::fs::DirBuilder::new();
     builder.recursive(true);
     #[cfg(unix)]

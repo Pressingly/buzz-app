@@ -214,7 +214,7 @@ fn takes_the_key_from_the_store_it_was_listed_in() {
     let id = agent_id(harness.pubkey(), "wss://relay.example");
     credentials.add(&id, &harness).unwrap();
     credentials.0.lock().unwrap().insert(
-        format!("buzz-desktop:{}", old.pubkey()),
+        format!("xyz.moneta.buzz.legacy-desktop:{}", old.pubkey()),
         old.hex().to_string(),
     );
     write(

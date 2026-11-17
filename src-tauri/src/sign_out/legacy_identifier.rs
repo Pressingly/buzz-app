@@ -1,5 +1,5 @@
-//! Buzz was `dev.local.buzz.foundation` before 1.0. Its first launch as
-//! `xyz.block.buzz.desktop` renames what Tauri and the WebView keep under the
+//! Buzz was `xyz.moneta.buzz.foundation` before 1.0. Its first launch as
+//! `xyz.moneta.buzz.desktop` renames what Tauri and the WebView keep under the
 //! old identifier, with any sign-out trash and pending sign-out marker, so an
 //! update keeps its data and still finishes a sign-out the old build committed.
 //! Development builds shared that storage until they became `.dev`; the first
@@ -10,10 +10,10 @@ use std::fs::{self, File};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
-pub(crate) const LEGACY: &str = "dev.local.buzz.foundation";
-pub(crate) const CURRENT: &str = "xyz.block.buzz.desktop";
+pub(crate) const LEGACY: &str = "xyz.moneta.buzz.foundation";
+pub(crate) const CURRENT: &str = "xyz.moneta.buzz.desktop";
 /// What `just desktop` and debug bundles run as (`scripts/desktop-config.mjs`).
-pub(crate) const DEV: &str = "xyz.block.buzz.desktop.dev";
+pub(crate) const DEV: &str = "xyz.moneta.buzz.desktop.dev";
 const BUSY: &str = "Quit every other Buzz window, then open Buzz again to finish moving its storage. Nothing was moved.";
 const AGENT_STOPPING: &str =
     "An agent is still stopping. Open Buzz again in a moment to finish moving its storage.";

@@ -131,11 +131,11 @@ export function installedBuzzDataDir(
   home = homedir(),
 ) {
   if (platform === "darwin")
-    return join(home, "Library/Application Support/xyz.block.buzz.desktop");
+    return join(home, "Library/Application Support/xyz.moneta.buzz.desktop");
   if (platform === "linux") {
     const xdg = env.XDG_DATA_HOME;
     const base = xdg && isAbsolute(xdg) ? xdg : join(home, ".local/share");
-    return join(base, "xyz.block.buzz.desktop");
+    return join(base, "xyz.moneta.buzz.desktop");
   }
   return undefined;
 }
@@ -150,7 +150,7 @@ export async function readAgentLibrary(path) {
     const dir = installedBuzzDataDir();
     if (!dir) return undefined;
     // Until the updated desktop moves its pre-1.0 folder, read that one.
-    const legacy = join(dirname(dir), "dev.local.buzz.foundation");
+    const legacy = join(dirname(dir), "xyz.moneta.buzz.foundation");
     const base = !(await exists(dir)) && (await exists(legacy)) ? legacy : dir;
     return join(base, "agents/identities.json");
   })();

@@ -21,7 +21,7 @@ const { readCredential, readers } = vi.hoisted(() => ({
       args: [
         "find-generic-password",
         "-s",
-        "buzz-desktop",
+        "xyz.moneta.buzz.legacy-desktop",
         "-a",
         "secrets",
         "-w",
@@ -30,7 +30,13 @@ const { readCredential, readers } = vi.hoisted(() => ({
     },
     linux: {
       command: "secret-tool",
-      args: ["lookup", "service", "buzz-desktop", "username", "secrets"],
+      args: [
+        "lookup",
+        "service",
+        "xyz.moneta.buzz.legacy-desktop",
+        "username",
+        "secrets",
+      ],
       failure: "Secret service read unavailable",
     },
   } as const,

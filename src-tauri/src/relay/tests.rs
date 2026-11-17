@@ -477,11 +477,11 @@ fn real_ipc_restores_identity_signs_and_rejects_invalid_requests() {
         #[cfg(target_os = "macos")]
         let path = home
             .path()
-            .join("Library/Application Support/xyz.block.buzz.app/agents/managed-agents.json");
+            .join("Library/Application Support/xyz.moneta.buzz.app/agents/managed-agents.json");
         #[cfg(target_os = "linux")]
         let path = home
             .path()
-            .join(".local/share/xyz.block.buzz.app/agents/managed-agents.json");
+            .join(".local/share/xyz.moneta.buzz.app/agents/managed-agents.json");
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, "[]").unwrap();
         child.env("HOME", home.path()).env_remove("XDG_DATA_HOME");

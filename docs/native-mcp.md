@@ -35,7 +35,7 @@ Build and launch with all of these settings:
 
 - Cargo feature: `native-mcp`.
 - Tauri config overlay: `src-tauri/tauri.native-mcp.conf.json`.
-- A separate identifier overlay: `dev.local.buzz.foundation.nexus-test-` followed
+- A separate identifier overlay: `xyz.moneta.buzz.foundation.nexus-test-` followed
   by 12 lowercase hexadecimal digits unique to the test instance.
 - Launch environment: `BUZZ_NATIVE_MCP_PORT`, an integer from `1024` through
   `65436`. Unset means off. Invalid settings fail before identity startup.
@@ -57,7 +57,7 @@ such as `--port` for Vite. A manual launch looks like this:
 BUZZ_DEV_VIEWER= BUZZ_NATIVE_MCP_PORT=19423 BUZZODZ_PROFILE=native-mcp-012345abcdef \
   bin/just desktop --features native-mcp \
   --config src-tauri/tauri.native-mcp.conf.json \
-  --config '{"identifier":"dev.local.buzz.foundation.nexus-test-012345abcdef"}'
+  --config '{"identifier":"xyz.moneta.buzz.foundation.nexus-test-012345abcdef"}'
 ```
 
 Replace the example identifier suffix for each owned test instance. Keep `BUZZ_DEV_VIEWER` explicitly empty to disable any inherited legacy broker pin.

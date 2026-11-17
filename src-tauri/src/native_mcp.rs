@@ -44,7 +44,7 @@ fn launch_port(
     }
     let suffix = config
         .identifier
-        .strip_prefix("dev.local.buzz.foundation.nexus-test-")
+        .strip_prefix("xyz.moneta.buzz.foundation.nexus-test-")
         .filter(|suffix| {
             suffix.len() == 12
                 && suffix
@@ -53,7 +53,7 @@ fn launch_port(
         });
     if suffix.is_none() {
         return Err(
-            "requires identifier dev.local.buzz.foundation.nexus-test-<12 lowercase hex digits>"
+            "requires identifier xyz.moneta.buzz.foundation.nexus-test-<12 lowercase hex digits>"
                 .into(),
         );
     }
@@ -76,7 +76,7 @@ mod tests {
 
     fn test_config() -> Config {
         let mut config: Config = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
-        config.identifier = "dev.local.buzz.foundation.nexus-test-012345abcdef".into();
+        config.identifier = "xyz.moneta.buzz.foundation.nexus-test-012345abcdef".into();
         config.app.with_global_tauri = true;
         config
     }
@@ -156,12 +156,12 @@ mod tests {
     fn opt_in_rejects_normal_or_malformed_identifiers_and_missing_global_api() {
         let mut config = test_config();
         for identifier in [
-            "dev.local.buzz.foundation",
-            "dev.local.buzz.foundation.nexus-test-",
-            "dev.local.buzz.foundation.nexus-test-012345abcde",
-            "dev.local.buzz.foundation.nexus-test-012345abcdef0",
-            "dev.local.buzz.foundation.nexus-test-012345abcdeF",
-            "dev.local.buzz.foundation.nexus-test-012345abcdeg",
+            "xyz.moneta.buzz.foundation",
+            "xyz.moneta.buzz.foundation.nexus-test-",
+            "xyz.moneta.buzz.foundation.nexus-test-012345abcde",
+            "xyz.moneta.buzz.foundation.nexus-test-012345abcdef0",
+            "xyz.moneta.buzz.foundation.nexus-test-012345abcdeF",
+            "xyz.moneta.buzz.foundation.nexus-test-012345abcdeg",
         ] {
             config.identifier = identifier.into();
             assert!(launch_port(&config, Some("19423".into()), None)

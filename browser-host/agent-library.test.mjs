@@ -30,21 +30,21 @@ it.each(identityCases)(
 
 it("locates the installed Buzz data directory per platform and refuses to guess elsewhere", () => {
   expect(installedBuzzDataDir("darwin", {}, "/Users/t")).toBe(
-    "/Users/t/Library/Application Support/xyz.block.buzz.desktop",
+    "/Users/t/Library/Application Support/xyz.moneta.buzz.desktop",
   );
   expect(installedBuzzDataDir("linux", {}, "/home/t")).toBe(
-    "/home/t/.local/share/xyz.block.buzz.desktop",
+    "/home/t/.local/share/xyz.moneta.buzz.desktop",
   );
   expect(
     installedBuzzDataDir("linux", { XDG_DATA_HOME: "/data" }, "/home/t"),
-  ).toBe("/data/xyz.block.buzz.desktop");
+  ).toBe("/data/xyz.moneta.buzz.desktop");
   // Tauri's dirs crate ignores a relative XDG_DATA_HOME; so must this reader,
   // or it would look where the installed app never writes.
   for (const XDG_DATA_HOME of ["relative", "./data", ""])
     expect(
       installedBuzzDataDir("linux", { XDG_DATA_HOME }, "/home/t"),
       JSON.stringify(XDG_DATA_HOME),
-    ).toBe("/home/t/.local/share/xyz.block.buzz.desktop");
+    ).toBe("/home/t/.local/share/xyz.moneta.buzz.desktop");
   expect(installedBuzzDataDir("win32", {}, "/home/t")).toBeUndefined();
   expect(installedBuzzDataDir("freebsd", {}, "/home/t")).toBeUndefined();
 });
@@ -328,17 +328,17 @@ it.skipIf(!["darwin", "linux"].includes(process.platform))(
         : root;
     const current = join(
       appData,
-      "xyz.block.buzz.desktop/agents/identities.json",
+      "xyz.moneta.buzz.desktop/agents/identities.json",
     );
     const legacy = join(
       appData,
-      "xyz.block.buzz.app/agents/managed-agents.json",
+      "xyz.moneta.buzz.app/agents/managed-agents.json",
     );
     try {
-      await mkdir(join(appData, "xyz.block.buzz.desktop/agents"), {
+      await mkdir(join(appData, "xyz.moneta.buzz.desktop/agents"), {
         recursive: true,
       });
-      await mkdir(join(appData, "xyz.block.buzz.app/agents"), {
+      await mkdir(join(appData, "xyz.moneta.buzz.app/agents"), {
         recursive: true,
       });
       await writeFile(legacy, JSON.stringify(rows));
@@ -366,14 +366,14 @@ it.skipIf(!["darwin", "linux"].includes(process.platform))(
       });
       expect(await readFile(legacy, "utf8")).toBe(JSON.stringify(rows));
       // Until the updated desktop moves it, the pre-1.0 folder is read.
-      const foundation = join(appData, "dev.local.buzz.foundation/agents");
+      const foundation = join(appData, "xyz.moneta.buzz.foundation/agents");
       await mkdir(foundation, { recursive: true });
       await writeFile(
         join(foundation, "identities.json"),
         JSON.stringify([{ pubkey: key, name: "Nova" }]),
       );
       expect((await readAgentLibrary()).identities).toEqual([]);
-      await rm(join(appData, "xyz.block.buzz.desktop"), { recursive: true });
+      await rm(join(appData, "xyz.moneta.buzz.desktop"), { recursive: true });
       expect(await readAgentLibrary()).toEqual({
         definitions: [],
         identities: [{ pubkey: key, name: "Nova" }],

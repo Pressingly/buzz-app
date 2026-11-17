@@ -88,7 +88,7 @@ fn human_restore_uses_the_selected_helper_and_fails_closed() {
     let agent = |operation, value: &[u8]| {
         dev_agent_store(
             operation,
-            "xyz.block.buzz.desktop.agents",
+            "xyz.moneta.buzz.desktop.agents",
             "agent-bundle-v1",
             value,
         )
@@ -120,7 +120,7 @@ fn human_restore_uses_the_selected_helper_and_fails_closed() {
     fs::write(&helper, "#!/bin/sh\n/usr/bin/head -c 2097153 /dev/zero\n").unwrap();
     assert_eq!(agent("read", &[]), Err(Error::Corrupt));
 
-    let service = "xyz.block.buzz.desktop.federated-session.debug";
+    let service = "xyz.moneta.buzz.desktop.federated-session.debug";
     let account = "1".repeat(64);
     for (body, expected) in [
         ("exit 10", Error::Absent),
@@ -194,9 +194,12 @@ esac
         Err(Error::Unavailable)
     );
     for (bad_service, bad_account) in [
-        ("xyz.block.buzz.desktop.federated-session", account.as_str()),
         (
-            "xyz.block.buzz.desktop.federated-session.debug.other",
+            "xyz.moneta.buzz.desktop.federated-session",
+            account.as_str(),
+        ),
+        (
+            "xyz.moneta.buzz.desktop.federated-session.debug.other",
             account.as_str(),
         ),
         (service, "human"),

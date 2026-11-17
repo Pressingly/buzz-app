@@ -4,6 +4,7 @@ pub(crate) mod access;
 pub(crate) mod agent;
 pub(crate) mod assertion;
 pub(crate) mod config;
+pub(crate) mod custody;
 pub(crate) mod protocol;
 pub(crate) mod socket;
 pub(crate) mod store;
@@ -134,6 +135,7 @@ struct Inner {
     assertions: Mutex<assertion::AssertionCache>,
     discoveries: Mutex<assertion::DiscoveryCache>,
     retiring: Mutex<Option<Retiring>>,
+    platform_key: std::sync::OnceLock<custody::Installer>,
     /// Holds the next renewal between recording its retirement and installing.
     #[cfg(test)]
     install_gate: Mutex<Option<testing::Gate>>,
@@ -159,6 +161,18 @@ pub(crate) type RetiringGuard = Box<dyn Send + Sync>;
 #[derive(Clone)]
 pub(crate) struct FederatedIdentity(Arc<Inner>);
 
+/// Sessions are stored under their server's descriptor. A platform key
+/// custody build stores its own, so it never restores a session (and the
+/// key beside it) that a build without custody saved.
+fn fingerprint(config: Option<&Config>, platform_custody: bool) -> Result<String, String> {
+    let mut identity = serde_json::to_vec(&config.map(Config::identity))
+        .map_err(|_| "Invalid federated identity configuration")?;
+    if platform_custody {
+        identity.extend_from_slice(b"\0platform-key-custody");
+    }
+    Ok(format!("{:x}", Sha256::digest(identity)))
+}
+
 impl FederatedIdentity {
     pub(crate) fn new() -> Result<Self, String> {
         let servers = option_env!("BUZZ_BUILD_FEDERATED_IDENTITY_CONFIG")
@@ -173,24 +187,19 @@ impl FederatedIdentity {
         let mut servers = servers.into_iter().map(Some);
         let first = servers.next().flatten();
         let peers = servers
-            .map(|config| Self::open(config, &profile, Vec::new()))
+            .map(|config| Self::open(config, &profile, false, Vec::new()))
             .collect::<Result<_, _>>()?;
-        Self::open(first, &profile, peers)
+        Self::open(first, &profile, custody::platform(), peers)
     }
     /// Each server's sessions are stored under its own descriptor, so a
     /// build's first server keeps the sessions it saved as the only one.
     fn open(
         config: Option<Config>,
         profile: &str,
+        platform_custody: bool,
         peers: Vec<FederatedIdentity>,
     ) -> Result<Self, String> {
-        let fingerprint = format!(
-            "{:x}",
-            Sha256::digest(
-                serde_json::to_vec(&config.as_ref().map(Config::identity))
-                    .map_err(|_| "Invalid federated identity configuration")?
-            )
-        );
+        let fingerprint = fingerprint(config.as_ref(), platform_custody)?;
         let account = format!("{:x}", Sha256::digest(format!("{profile}\0{fingerprint}")));
         let store = Arc::new(store::SecureStore {
             account: account.clone(),
@@ -265,6 +274,7 @@ impl FederatedIdentity {
             assertions: Mutex::new(Default::default()),
             discoveries: Mutex::new(Default::default()),
             retiring: Mutex::default(),
+            platform_key: std::sync::OnceLock::new(),
             peers,
             #[cfg(test)]
             revocations: Mutex::default(),
@@ -324,6 +334,26 @@ impl FederatedIdentity {
             .retiring
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(retiring);
+    }
+    /// Platform key custody: every browser sign-in to this server installs
+    /// the account's key with `installer` before the session is saved.
+    pub(crate) fn on_platform_key(&self, installer: custody::Installer) {
+        let _ = self.0.platform_key.set(installer);
+    }
+    fn platform_key(&self) -> Option<custody::Installer> {
+        self.0.platform_key.get().cloned()
+    }
+    /// A refused browser sign-in. Platform custody names the one refusal the
+    /// person can act on.
+    fn login_refusal(&self, parameters: &[(String, String)]) -> &'static str {
+        let unverified = parameters.iter().any(|(name, value)| {
+            name == "error_description" && value == "email_verification_required"
+        });
+        if unverified && self.platform_key().is_some() {
+            "email-verification-required"
+        } else {
+            "login-refused"
+        }
     }
     pub(crate) async fn record_retirement(&self) -> Result<Option<RetiringGuard>, String> {
         let retiring = self
@@ -957,7 +987,7 @@ impl FederatedIdentity {
         }
         let response = response?;
         if response.parameters.iter().any(|(name, _)| name == "error") {
-            return Err("login-refused".into());
+            return Err(self.login_refusal(&response.parameters).into());
         }
         let mut codes = response
             .parameters
@@ -1020,6 +1050,14 @@ impl FederatedIdentity {
             _ = cancel.cancelled() => return Err("sign-in-canceled".into()),
             result = self.verify(&record) => result?,
         };
+        let installer = self.platform_key();
+        let platform_key = match &installer {
+            Some(_) => tokio::select! {
+                _ = cancel.cancelled() => return Err("sign-in-canceled".into()),
+                result = custody::fetch(config, &record.session_token) => Some(result?),
+            },
+            None => None,
+        };
         // Persistence/install/late cleanup still serialize with sign-out.
         let _operation = self.0.operation.lock().await;
         {
@@ -1030,6 +1068,9 @@ impl FederatedIdentity {
             // Commit point: past here a renewal can't be canceled, only ended
             // with its session, so nothing below has to undo a cancel.
             state.renewal = None;
+        }
+        if let (Some(installer), Some(key)) = (&installer, platform_key) {
+            key.install(installer).await?;
         }
         let changing = matches!(&self.state().account, Some(previous) if *previous != record.email);
         // Held until this renewal installs or fails.

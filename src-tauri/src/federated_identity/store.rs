@@ -7,9 +7,9 @@ use zeroize::{Zeroize, Zeroizing};
 /// flavour shares each server's session per profile, and Sign out of Buzz
 /// erases them all.
 pub(crate) const SERVICE: &str = if cfg!(debug_assertions) {
-    "xyz.block.buzz.desktop.federated-session.debug"
+    "xyz.moneta.buzz.desktop.federated-session.debug"
 } else {
-    "xyz.block.buzz.desktop.federated-session"
+    "xyz.moneta.buzz.desktop.federated-session"
 };
 const MAX_BUNDLE: usize = 1024 * 1024;
 

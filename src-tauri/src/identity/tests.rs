@@ -278,13 +278,13 @@ fn development_and_release_items_are_separate() {
     assert_eq!(
         credentials::HUMAN_SERVICE,
         if cfg!(debug_assertions) {
-            "xyz.block.buzz.desktop.identity.debug"
+            "xyz.moneta.buzz.desktop.identity.debug"
         } else {
-            "xyz.block.buzz.desktop.identity"
+            "xyz.moneta.buzz.desktop.identity"
         }
     );
     assert_eq!(credentials::HUMAN_ACCOUNT, "human");
-    assert!(!credentials::HUMAN_SERVICE.starts_with("buzz-desktop"));
+    assert!(!credentials::HUMAN_SERVICE.starts_with("xyz.moneta.buzz.legacy-desktop"));
 }
 
 #[test]
@@ -803,4 +803,67 @@ fn sidebar_plugin_sort_registers_are_bounded_and_namespaced() {
         let record = json!({"version":1,"groups":{},"pluginSort":choices});
         assert!(super::validate_sidebar_payload("channel-sort", &record).is_err());
     }
+}
+
+#[test]
+fn platform_custody_saves_the_account_key_once_and_never_replaces_another() {
+    let store = Arc::new(Memory::default());
+    let public = fixture().viewer().unwrap();
+    let key = || Zeroizing::new([1; 32]);
+    assert_eq!(
+        identity(&store).adopt_platform(Zeroizing::new([2; 32]), &public),
+        Err("invalid-response")
+    );
+    assert!(store.saved.lock().unwrap().is_none());
+    assert_eq!(
+        identity(&store).adopt_platform(key(), &public),
+        Ok(public.clone())
+    );
+    let saved = store.saved.lock().unwrap().clone();
+    assert_eq!(
+        identity(&store).adopt_platform(key(), &public),
+        Ok(public.clone())
+    );
+    assert_eq!(*store.saved.lock().unwrap(), saved);
+
+    let other = Arc::new(Memory::default());
+    let mine = identity(&other).save(None).unwrap();
+    assert_eq!(
+        identity(&other).adopt_platform(key(), &public),
+        Err("local-key-differs")
+    );
+    assert_eq!(identity(&other).restore().unwrap(), Some(mine));
+}
+
+#[test]
+fn platform_custody_rereads_a_key_another_copy_saved_after_launch() {
+    let store = Arc::new(Memory::default());
+    let public = fixture().viewer().unwrap();
+    let mut launched_first = identity(&store);
+    assert_eq!(launched_first.restore().unwrap(), None);
+    identity(&store)
+        .adopt_platform(Zeroizing::new([1; 32]), &public)
+        .unwrap();
+    let saved = store.saved.lock().unwrap().clone();
+
+    assert_eq!(
+        launched_first.adopt_platform(Zeroizing::new([1; 32]), &public),
+        Ok(public.clone())
+    );
+    assert_eq!(*store.saved.lock().unwrap(), saved);
+}
+
+#[test]
+fn platform_custody_names_a_malformed_saved_key_and_keeps_it() {
+    let store = Arc::new(Memory::default());
+    *store.saved.lock().unwrap() = Some(b"not an nsec".to_vec());
+    let public = fixture().viewer().unwrap();
+    assert_eq!(
+        identity(&store).adopt_platform(Zeroizing::new([1; 32]), &public),
+        Err("local-key-malformed")
+    );
+    assert_eq!(
+        store.saved.lock().unwrap().as_deref(),
+        Some(&b"not an nsec"[..])
+    );
 }

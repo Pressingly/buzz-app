@@ -145,7 +145,7 @@ fn deletion_is_bound_to_this_apps_exact_credential_and_can_be_retried() {
     let id = agent_id(PUB, "wss://relay.example");
     let account = format!("agent:{id}");
     fake.put(SERVICE, &account, KEY.as_bytes().to_vec());
-    fake.put("buzz-desktop", "secrets", blob());
+    fake.put("xyz.moneta.buzz.legacy-desktop", "secrets", blob());
     assert!(credentials.delete(&id, &"ab".repeat(32)).is_err());
     assert!(fake
         .entries
@@ -163,7 +163,7 @@ fn deletion_is_bound_to_this_apps_exact_credential_and_can_be_retried() {
         .entries
         .lock()
         .unwrap()
-        .contains_key(&("buzz-desktop".into(), "secrets".into())));
+        .contains_key(&("xyz.moneta.buzz.legacy-desktop".into(), "secrets".into())));
 }
 fn blob() -> Vec<u8> {
     serde_json::to_vec(&json!({format!("agent:{PUB}"):KEY, "identity":"not-the-agent-key"}))
@@ -173,11 +173,15 @@ fn blob() -> Vec<u8> {
 #[test]
 fn production_credential_adapter_selects_exact_legacy_service_and_account() {
     for (source, service, other) in [
-        (LegacySource::Installed, "buzz-desktop", "buzz-desktop-dev"),
+        (
+            LegacySource::Installed,
+            "xyz.moneta.buzz.legacy-desktop",
+            "xyz.moneta.buzz.legacy-desktop-dev",
+        ),
         (
             LegacySource::Development,
-            "buzz-desktop-dev",
-            "buzz-desktop",
+            "xyz.moneta.buzz.legacy-desktop-dev",
+            "xyz.moneta.buzz.legacy-desktop",
         ),
     ] {
         let (credentials, fake) = fixture();
@@ -203,8 +207,8 @@ fn missing_denied_and_malformed_legacy_never_fall_back_or_write() {
         ] {
             let (credentials, fake) = fixture();
             *fake.failure.lock().unwrap() = failure;
-            fake.put("buzz-desktop", "secrets", blob());
-            fake.put("buzz-desktop-dev", "secrets", blob());
+            fake.put("xyz.moneta.buzz.legacy-desktop", "secrets", blob());
+            fake.put("xyz.moneta.buzz.legacy-desktop-dev", "secrets", blob());
             if failure.is_none() {
                 fake.put(
                     selected.keyring_service(),
@@ -237,7 +241,7 @@ fn legacy_blob_rejects_wrong_keys_duplicates_and_unbounded_data() {
         [blob(), vec![b' '; MAX_BLOB]].concat(),
     ] {
         let (credentials, fake) = fixture();
-        fake.put("buzz-desktop", "secrets", bytes);
+        fake.put("xyz.moneta.buzz.legacy-desktop", "secrets", bytes);
         assert!(credentials.read_legacy(LegacySource::Installed, PUB).is_err());
         assert_eq!(fake.calls.lock().unwrap().len(), 1);
     }
@@ -261,9 +265,9 @@ fn legacy_human_reads_only_the_installed_identity_entry() {
         let (credentials, fake) = fixture();
         *fake.failure.lock().unwrap() = failure;
         if let Some(bytes) = bytes {
-            fake.put("buzz-desktop", "secrets", bytes);
+            fake.put("xyz.moneta.buzz.legacy-desktop", "secrets", bytes);
         }
-        fake.put("buzz-desktop-dev", "secrets", blob());
+        fake.put("xyz.moneta.buzz.legacy-desktop-dev", "secrets", blob());
         match (
             credentials.read_legacy_human(LegacySource::Installed),
             expected,
@@ -275,7 +279,11 @@ fn legacy_human_reads_only_the_installed_identity_entry() {
         // One read of the selected source; nothing is written or deleted.
         assert_eq!(
             *fake.calls.lock().unwrap(),
-            vec![("legacy".into(), "buzz-desktop".into(), "secrets".into())]
+            vec![(
+                "legacy".into(),
+                "xyz.moneta.buzz.legacy-desktop".into(),
+                "secrets".into()
+            )]
         );
     }
 }
@@ -313,7 +321,7 @@ fn destination_is_separate_exact_bound_create_only_and_verified() {
     assert!(credentials.read(&id, PUB).is_err()); // denied != absent
     *fake.failure.lock().unwrap() = None;
     fake.put(
-        "xyz.block.buzz.desktop.agents",
+        "xyz.moneta.buzz.desktop.agents",
         &account,
         b"0000000000000000000000000000000000000000000000000000000000000002".to_vec(),
     );
@@ -348,7 +356,7 @@ fn adoption_uses_production_adapter_and_reads_back_create_only_destination() {
     )
     .unwrap();
     let (credentials, fake) = fixture();
-    fake.put("buzz-desktop-dev", "secrets", blob());
+    fake.put("xyz.moneta.buzz.legacy-desktop-dev", "secrets", blob());
     let old = OldStores {
         harness: dest.path().join("missing.json"),
         data_dir: legacy.path().into(),
@@ -362,26 +370,30 @@ fn adoption_uses_production_adapter_and_reads_back_create_only_destination() {
     assert_eq!(
         *fake.calls.lock().unwrap(),
         vec![
-            ("legacy".into(), "buzz-desktop-dev".into(), "secrets".into()),
+            (
+                "legacy".into(),
+                "xyz.moneta.buzz.legacy-desktop-dev".into(),
+                "secrets".into()
+            ),
             (
                 "saved".into(),
-                "xyz.block.buzz.desktop.agents".into(),
+                "xyz.moneta.buzz.desktop.agents".into(),
                 account.clone()
             ),
             ("saved".into(), PREVIOUS_SERVICE.into(), account.clone()),
             (
                 "saved".into(),
-                "xyz.block.buzz.desktop.agents".into(),
+                "xyz.moneta.buzz.desktop.agents".into(),
                 account.clone()
             ),
             (
                 "add".into(),
-                "xyz.block.buzz.desktop.agents".into(),
+                "xyz.moneta.buzz.desktop.agents".into(),
                 account.clone()
             ),
             (
                 "saved".into(),
-                "xyz.block.buzz.desktop.agents".into(),
+                "xyz.moneta.buzz.desktop.agents".into(),
                 account
             ),
         ]
@@ -555,7 +567,7 @@ fn rollback_delete_then_reimport_reuses_retained_bundle_without_writing() {
     )
     .unwrap();
     let (old_credentials, fake) = fixture();
-    fake.put("buzz-desktop-dev", "secrets", blob());
+    fake.put("xyz.moneta.buzz.legacy-desktop-dev", "secrets", blob());
     let path = dest.path().join("identities.json");
     let store = AppAgents::open(path.clone());
     let old = OldStores {
@@ -586,7 +598,11 @@ fn rollback_delete_then_reimport_reuses_retained_bundle_without_writing() {
     assert_eq!(
         *fake.calls.lock().unwrap(),
         vec![
-            ("legacy".into(), "buzz-desktop-dev".into(), "secrets".into()),
+            (
+                "legacy".into(),
+                "xyz.moneta.buzz.legacy-desktop-dev".into(),
+                "secrets".into()
+            ),
             ("saved".into(), SERVICE.into(), bundle::ACCOUNT.into()),
         ]
     );

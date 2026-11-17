@@ -36,6 +36,7 @@
     "allow-nsec-backup-set-choice",
     "allow-sign-out",
     "allow-sign-out-wipe-refusal",
+    "allow-platform-key-sign-in-paused",
     "allow-federated-identity-snapshot",
     "allow-federated-identity-servers",
     "allow-federated-identity-sign-in",

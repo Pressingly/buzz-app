@@ -826,14 +826,14 @@ fn default_home() -> Result<PathBuf> {
         dirs::data_dir().ok_or("Cannot determine application data directory; set BUZZODZ_HOME")?;
     let (home, older, open): (_, &[_], _) = if cfg!(debug_assertions) {
         (
-            "xyz.block.buzz.desktop.dev",
-            &["xyz.block.buzz.desktop", "dev.local.buzz.foundation"],
+            "xyz.moneta.buzz.desktop.dev",
+            &["xyz.moneta.buzz.desktop", "xyz.moneta.buzz.foundation"],
             "Development Buzz has not copied the installed app's storage yet. Run `just desktop` once",
         )
     } else {
         (
-            "xyz.block.buzz.desktop",
-            &["dev.local.buzz.foundation"],
+            "xyz.moneta.buzz.desktop",
+            &["xyz.moneta.buzz.foundation"],
             "Buzz has not moved its storage to its 1.0 folder yet. Open Buzz once",
         )
     };

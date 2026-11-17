@@ -209,7 +209,7 @@ test("macOS launchers preserve icon, port, explicit config and runner arguments"
   const config = JSON.parse(explicit.call[3]);
   assert.equal(readFileSync(config.bundle.icon[0], "utf8"), "first-label");
   assert.deepEqual(config, {
-    identifier: "xyz.block.buzz.desktop.dev",
+    identifier: "xyz.moneta.buzz.desktop.dev",
     bundle: config.bundle,
     build: build(1431),
   });

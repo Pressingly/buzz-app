@@ -115,6 +115,19 @@ export default defineConfig(async ({ command, mode }) => {
     : openRelay
       ? defaultOrigin
       : "";
+  // Read from the process like the native build's descriptor (build.rs).
+  const keyCustody = process.env.BUZZ_BUILD_KEY_CUSTODY ?? "";
+  if (keyCustody !== "" && keyCustody !== "platform")
+    throw new Error('BUZZ_BUILD_KEY_CUSTODY must be empty or "platform".');
+  // As the relay's canonical_channel_name: no leading "#" or whitespace.
+  const defaultChannelInput = process.env.BUZZ_BUILD_DEFAULT_CHANNEL ?? "";
+  const defaultChannel = defaultChannelInput.replace(/^[#\s]+/u, "").trimEnd();
+  if (defaultChannelInput.trim() !== "" && defaultChannel === "")
+    throw new Error("BUZZ_BUILD_DEFAULT_CHANNEL must name a channel.");
+  if ([...defaultChannel].length > 120)
+    throw new Error(
+      "BUZZ_BUILD_DEFAULT_CHANNEL must be at most 120 characters.",
+    );
   // Packagers may point the bundled goose's Databricks provider at a workspace.
   const databricksHost = env.BUZZ_DATABRICKS_HOST?.trim() ?? "";
   if (databricksHost) {
@@ -186,6 +199,9 @@ export default defineConfig(async ({ command, mode }) => {
       "import.meta.env.VITE_BUZZ_OPEN_RELAY": JSON.stringify(openOrigin),
       "import.meta.env.VITE_BUZZ_DATABRICKS_HOST":
         JSON.stringify(databricksHost),
+      "import.meta.env.VITE_BUZZ_KEY_CUSTODY": JSON.stringify(keyCustody),
+      "import.meta.env.VITE_BUZZ_DEFAULT_CHANNEL":
+        JSON.stringify(defaultChannel),
       "import.meta.env.VITE_BUZZ_FIRST_RUN_ACCOUNT":
         JSON.stringify(firstRunAccount),
     },

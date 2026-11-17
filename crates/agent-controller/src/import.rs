@@ -15,14 +15,14 @@ pub enum LegacySource {
 impl LegacySource {
     pub fn keyring_service(self) -> &'static str {
         match self {
-            Self::Installed => "buzz-desktop",
-            Self::Development => "buzz-desktop-dev",
+            Self::Installed => "xyz.moneta.buzz.legacy-desktop",
+            Self::Development => "xyz.moneta.buzz.legacy-desktop-dev",
         }
     }
     pub fn app_directory(self) -> &'static str {
         match self {
-            Self::Installed => "xyz.block.buzz.app",
-            Self::Development => "xyz.block.buzz.app.dev",
+            Self::Installed => "xyz.moneta.buzz.app",
+            Self::Development => "xyz.moneta.buzz.app.dev",
         }
     }
 }
