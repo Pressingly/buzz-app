@@ -40,6 +40,12 @@ if git grep -nIE "$BLOCK_NAMES" -- . ':!scripts/moneta-namespace.sh' ':!*.lock' 
   exit 1
 fi
 
+windows_conf=src-tauri/tauri.windows.conf.json
+if ! grep -q '"productName": "Buzz",' "$windows_conf" || ! grep -q '"publisher": "Moneta",' "$windows_conf"; then
+  echo "$windows_conf must keep productName \"Buzz\" and publisher \"Moneta\"; restore them" >&2
+  exit 1
+fi
+
 # Review any other ~/.buzz-foundation use upstream adds: unless it is one of the
 # deliberately shared folders above, it couples this app to Block's again.
 git grep -nIE '\.buzz-foundation' -- . ':!scripts/moneta-namespace.sh' ':!*.lock' |
