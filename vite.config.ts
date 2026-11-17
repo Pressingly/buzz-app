@@ -11,6 +11,7 @@ import {
 } from "./src/features/communities/destination.ts";
 import { parseFirstRunAccountSeed } from "./src/features/identity/first-run-seed.ts";
 import { isBuiltInBuilderlab } from "./src/features/federated-identity/community-hosts.ts";
+import { askiiBuildInputs } from "./src/bundled/goose/askii-preset.ts";
 
 /** `BUZZ_BUILDERLAB_URL` from the process or `.env.local`, or undefined when unset. */
 function sharedBuilderlabUrl() {
@@ -128,6 +129,9 @@ export default defineConfig(async ({ command, mode }) => {
     throw new Error(
       "BUZZ_BUILD_DEFAULT_CHANNEL must be at most 120 characters.",
     );
+  // Read from the process like the native build (build.rs), which gates the
+  // key commands on the same URL.
+  const askii = askiiBuildInputs(process.env);
   // Packagers may point the bundled goose's Databricks provider at a workspace.
   const databricksHost = env.BUZZ_DATABRICKS_HOST?.trim() ?? "";
   if (databricksHost) {
@@ -200,6 +204,8 @@ export default defineConfig(async ({ command, mode }) => {
       "import.meta.env.VITE_BUZZ_DATABRICKS_HOST":
         JSON.stringify(databricksHost),
       "import.meta.env.VITE_BUZZ_KEY_CUSTODY": JSON.stringify(keyCustody),
+      "import.meta.env.VITE_BUZZ_ASKII_URL": JSON.stringify(askii.url),
+      "import.meta.env.VITE_BUZZ_ASKII_MODEL": JSON.stringify(askii.model),
       "import.meta.env.VITE_BUZZ_DEFAULT_CHANNEL":
         JSON.stringify(defaultChannel),
       "import.meta.env.VITE_BUZZ_FIRST_RUN_ACCOUNT":

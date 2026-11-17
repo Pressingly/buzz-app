@@ -471,6 +471,30 @@ describe("GooseSetup", () => {
     expect(await goose.models("hidden")).toEqual([]);
   });
 
+  it("names LiteLLM Askii in a preset build, which takes a pasted key", async () => {
+    const litellm = {
+      providerId: "litellm",
+      providerName: "LiteLLM",
+      configured: false,
+      visibleInSetup: true,
+      configKeys: [{ name: "LITELLM_API_KEY", required: true, secret: true }],
+    };
+    const named = async () =>
+      (await setup({ providers: [litellm] }).setup.providers()).providers.find(
+        (provider) => provider.id === "litellm",
+      );
+    expect(await named()).toMatchObject({ name: "LiteLLM" });
+    vi.stubEnv("VITE_BUZZ_ASKII_URL", "https://api.askii.example");
+    try {
+      expect(await named()).toMatchObject({
+        name: "Askii",
+        needs: "Askii needs an API key. Paste one in Goose setup.",
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("offers no catalog models for a provider that is not set up, and says what it needs", async () => {
     const saved = new Map<string, Set<string>>();
     const { setup: goose } = setup({

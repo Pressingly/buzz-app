@@ -40,6 +40,9 @@ import { InlineHeader } from "../../shared/design-system/ui/Header";
 import { SettingsGroup } from "../../shared/design-system/ui/SettingsGroup";
 import { GooseLogoIcon } from "../../shared/design-system/icons";
 import { validWorkspace } from "../codex/config";
+import { askiiPreset } from "./askii";
+import { ASKII_PROVIDER } from "./askii-preset";
+import { AskiiKeyField } from "./AskiiKeyField";
 import {
   type Config,
   DEFAULT_CONFIG,
@@ -219,6 +222,7 @@ export function createTabs({
   runtime: GooseRuntime;
   history: GooseHistory;
 }>) {
+  const askii = askiiPreset();
   function DefaultControl({ onConfigure }: { onConfigure(): void }) {
     const state = useSyncExternalStore(setup.subscribe, setup.snapshot);
     const [listing, reload] = useRead(
@@ -294,7 +298,8 @@ export function createTabs({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const value = draft ?? {
-      provider: listing.value?.defaults.provider ?? "",
+      provider:
+        listing.value?.defaults.provider ?? (askii ? ASKII_PROVIDER : ""),
       model: listing.value?.defaults.model ?? "",
     };
     return (
@@ -505,7 +510,7 @@ export function createTabs({
           </div>
         )}
         {!rows && provider && (
-          <ProviderKeys
+          <ProviderCredentials
             key={provider.id}
             provider={provider}
             keyDraft={keyDraft}
@@ -564,7 +569,7 @@ export function createTabs({
           </div>
         )}
         {provider && (
-          <ProviderKeys
+          <ProviderCredentials
             key={provider.id}
             provider={provider}
             disabled={false}
@@ -672,6 +677,22 @@ export function createTabs({
           },
         ]}
         onValueChange={onChange}
+      />
+    );
+  }
+
+  /** In an Askii preset build, its provider's key is Buzz's, not goose's. */
+  function ProviderCredentials(props: Parameters<typeof ProviderKeys>[0]) {
+    if (!askii || props.provider.id !== ASKII_PROVIDER)
+      return <ProviderKeys {...props} />;
+    return (
+      <AskiiKeyField
+        preset={askii}
+        disabled={props.disabled}
+        onChanged={() => {
+          runtime.providerKeyChanged();
+          void setup.check().then(props.onSaved);
+        }}
       />
     );
   }
