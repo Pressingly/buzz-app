@@ -1196,3 +1196,50 @@ it("preserves a provider's custom model when switching away and back after resta
       ),
   ).toBe(true);
 });
+
+describe("Askii models in a preset build", () => {
+  const litellm = {
+    providerId: "litellm",
+    providerName: "LiteLLM",
+    defaultModel: "gpt-4o-mini",
+    configured: true,
+    visibleInSetup: true,
+  };
+
+  it("lists Askii's models without goose's metadata discovery", async () => {
+    vi.stubEnv("VITE_BUZZ_ASKII_URL", "https://api.askii.example");
+    try {
+      const { fake } = setup({
+        providers: [litellm],
+        supported: ["from-goose"],
+      });
+      const list = vi.fn(async () => ["gpt-5-mini", "claude-sonnet-4-5"]);
+      const goose = new GooseSetup(fake, () => {}, list);
+      expect(await goose.models("litellm")).toEqual([
+        { id: "gpt-5-mini", label: "gpt-5-mini" },
+        { id: "claude-sonnet-4-5", label: "claude-sonnet-4-5" },
+      ]);
+      await goose.models("litellm");
+      expect(list).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("asks again after a listing left only the preset's model", async () => {
+    vi.stubEnv("VITE_BUZZ_ASKII_URL", "https://api.askii.example");
+    try {
+      const { fake } = setup({ providers: [litellm] });
+      const list = vi
+        .fn<() => Promise<string[]>>()
+        .mockResolvedValueOnce(["gpt-5-mini"])
+        .mockResolvedValueOnce(["gpt-5-mini", "o4"]);
+      const goose = new GooseSetup(fake, () => {}, list);
+      expect(await goose.models("litellm")).toHaveLength(1);
+      await flush();
+      expect(await goose.models("litellm")).toHaveLength(2);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
