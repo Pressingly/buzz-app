@@ -143,6 +143,11 @@ export async function askiiModels(
   list: ListAskiiModels = nativeAskiiModels,
 ): Promise<string[]> {
   const key = await currentAskiiKey(preset, store).catch(() => undefined);
-  const listed = key ? await list(key.key).catch(() => []) : [];
+  const listed = key
+    ? await list(key.key).catch((error) => {
+        console.warn("Askii model list failed", error);
+        return [];
+      })
+    : [];
   return askiiModelIds(listed, preset.model);
 }
