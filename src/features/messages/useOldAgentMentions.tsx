@@ -5,6 +5,7 @@ import type { MentionRecipient } from "./mention-draft";
 import { Dialog } from "../../shared/design-system/ui/Dialog";
 import { Button } from "../../shared/design-system/ui/Button";
 import { Select } from "../../shared/design-system/ui/Select";
+import { defaultAgentType } from "../../bundled/agents/default-type";
 
 type Pending = {
   found: readonly PortableAgent[];
@@ -32,7 +33,8 @@ export function useOldAgentMentions(
   const importing = useRef(false);
   // Importing gives the agent a key here, so a hosted type cannot take one.
   const types = agents?.types().filter((item) => !item.remote) ?? [];
-  const chosen = types.find((item) => item.key === type) ?? types[0];
+  const chosen =
+    types.find((item) => item.key === type) ?? defaultAgentType(types);
   // The import came through with notes, and only sending is left.
   const imported = !!pending?.notes && !pending.error;
   async function port() {

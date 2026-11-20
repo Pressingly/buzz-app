@@ -1,5 +1,6 @@
 mod archive;
 mod askii_key;
+mod askii_models;
 #[cfg(test)]
 mod build_resources;
 mod federated_identity;
@@ -689,6 +690,7 @@ fn commands<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Sen
         askii_key::askii_key_read,
         askii_key::askii_key_save,
         askii_key::askii_key_clear,
+        askii_models::askii_models,
         federated_identity::access::federated_identity_register,
         federated_identity::access::federated_identity_unregister,
         federated_identity::access::federated_identity_request,

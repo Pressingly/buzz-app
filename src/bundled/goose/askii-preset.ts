@@ -181,3 +181,13 @@ export const askiiEnv = (key: AskiiKey): Record<string, string> => ({
   LITELLM_HOST: key.url,
   LITELLM_API_KEY: key.key,
 });
+
+/** The picker's Askii models: the preset's model first, then the rest of what
+ * Askii listed. An empty listing still offers the preset's model. */
+export const askiiModelIds = (
+  listed: readonly string[],
+  presetModel: string,
+): string[] => [
+  presetModel,
+  ...listed.filter((id) => id !== presetModel).sort(),
+];

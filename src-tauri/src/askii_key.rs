@@ -44,7 +44,7 @@ fn read_bounded(path: &Path) -> Result<Option<String>, String> {
     Ok(Some(text))
 }
 
-fn valid_key(key: &str) -> bool {
+pub(crate) fn valid_key(key: &str) -> bool {
     (8..=MAX_KEY).contains(&key.len()) && key.bytes().all(|b| b.is_ascii_graphic())
 }
 

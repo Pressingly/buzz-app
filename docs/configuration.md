@@ -271,6 +271,12 @@ native key commands answer nothing.
   that changes the key or host goose would start with; it starts again on its
   next turn. Sign out clears the pasted key.
 - Askii keys carry no MCP tools; the preset sets only the model provider.
+- The Askii model picker lists the key's models from the build URL's
+  `/v1/models` (native `askii_models`, 20 s limit), not through goose, whose
+  LiteLLM provider reads `/model/info` within a fixed 5 s that Askii's full
+  metadata outlasts. The build's model comes first. A listing that fails, or no
+  key, offers the build's model alone and is asked again next time; Custom model
+  still takes any other ID.
 
 ## Default channel build input (Pressingly fork)
 

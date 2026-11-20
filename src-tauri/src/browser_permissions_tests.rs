@@ -82,6 +82,7 @@ fn native_command_permissions_isolate_webviews() {
         "askii_key_read",
         "askii_key_save",
         "askii_key_clear",
+        "askii_models",
         "credential_pair_answer",
         "credential_pairings_list",
         "credential_pairing_revoke",
