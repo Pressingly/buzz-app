@@ -131,6 +131,7 @@ import {
 } from "./routes";
 import { AgentCardCreate } from "./AgentCardCreate";
 import { writeClipboardText } from "../../shared/clipboard";
+import { defaultAgentType } from "./default-type";
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -1593,7 +1594,8 @@ function ImportAgents({
     };
   }, [agents]);
   const typeFor = (id: string) =>
-    types.find((item) => item.key === chosenTypes.get(id)) ?? types[0];
+    types.find((item) => item.key === chosenTypes.get(id)) ??
+    defaultAgentType(types);
   const chooseType = (id: string, key: string) =>
     setChosenTypes((last) => new Map(last).set(id, key));
   const labels = publicKeyLabels(found?.agents.map((a) => a.pubkey) ?? []);

@@ -21,8 +21,8 @@ import {
   type ConfigValue,
   valuesOf,
 } from "../../features/agent-harness/acp/session";
-import { askiiPreset } from "./askii";
-import { ASKII_PROVIDER } from "./askii-preset";
+import { askiiModels, askiiPreset } from "./askii";
+import { ASKII_PROVIDER, type AskiiPreset } from "./askii-preset";
 
 export type ConfigKey = Readonly<{
   name: string;
@@ -150,6 +150,9 @@ export class GooseSetup {
   constructor(
     private readonly host: GooseHost | undefined,
     private readonly defaultsChanged: () => void = () => {},
+    private readonly listAskiiModels: (
+      preset: AskiiPreset,
+    ) => Promise<readonly string[]> = askiiModels,
   ) {}
 
   snapshot = () => this.state;
@@ -405,6 +408,8 @@ export class GooseSetup {
       (item) => item.id === id,
     );
     if (listed?.needs) throw new Error(listed.needs);
+    const preset = id === ASKII_PROVIDER ? askiiPreset() : undefined;
+    if (preset && listed?.configured) return this.askii(preset);
     const prefixes = PREFIXES[id];
     const models =
       listed?.configured &&
@@ -416,6 +421,27 @@ export class GooseSetup {
           prefixes.some((prefix) => model.id.startsWith(prefix)),
         )
       : models;
+  }
+
+  /** goose lists Askii through `/model/info`, which outlasts its 5 s limit;
+   * Askii's own names come from `/v1/models` instead. */
+  private askii(preset: AskiiPreset): Promise<readonly ModelChoice[]> {
+    let models = this.live.get(ASKII_PROVIDER);
+    if (!models) {
+      models = this.listAskiiModels(preset).then((ids) =>
+        ids.map((id) => ({ id, label: id })),
+      );
+      const listing = models;
+      const forget = () => {
+        if (this.live.get(ASKII_PROVIDER) === listing)
+          this.live.delete(ASKII_PROVIDER);
+      };
+      void models.then((listed) => {
+        if (listed.length <= 1) forget();
+      }, forget);
+      this.live.set(ASKII_PROVIDER, models);
+    }
+    return models;
   }
 
   private supported(id: string): Promise<readonly ModelChoice[]> {

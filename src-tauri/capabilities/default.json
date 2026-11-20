@@ -41,6 +41,7 @@
     "allow-askii-key-read",
     "allow-askii-key-save",
     "allow-askii-key-clear",
+    "allow-askii-models",
     "allow-federated-identity-snapshot",
     "allow-federated-identity-servers",
     "allow-federated-identity-sign-in",

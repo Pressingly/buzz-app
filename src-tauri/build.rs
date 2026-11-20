@@ -98,6 +98,7 @@ fn main() {
             "askii_key_read",
             "askii_key_save",
             "askii_key_clear",
+            "askii_models",
             "identity_prepare_remote_agent_authorization",
             "identity_sign_builderlab_binding",
             "federated_identity_snapshot",

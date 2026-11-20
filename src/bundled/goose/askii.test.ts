@@ -3,6 +3,7 @@ import {
   type AskiiStore,
   askiiKeyStatus,
   askiiLaunch,
+  askiiModels,
   currentAskiiKey,
   seedAskiiDefaults,
 } from "./askii";
@@ -149,5 +150,59 @@ describe("seedAskiiDefaults", () => {
       await seedAskiiDefaults({ request } as never, preset, 1000);
       expect(request).toHaveBeenCalledTimes(1);
     }
+  });
+});
+
+describe("askiiModels", () => {
+  it("lists the key's models with the preset's first", async () => {
+    const list = vi.fn(async () => ["o4", "gpt-5-mini", "claude-sonnet-4-5"]);
+    expect(await askiiModels(preset, store(null, PASTED_KEY), list)).toEqual([
+      "gpt-5-mini",
+      "claude-sonnet-4-5",
+      "o4",
+    ]);
+    expect(list).toHaveBeenCalledWith(PASTED_KEY);
+  });
+
+  it("offers the preset's model when the listing fails", async () => {
+    const list = vi.fn(async () => {
+      throw new Error("Askii did not answer for its model list");
+    });
+    expect(await askiiModels(preset, store(null, PASTED_KEY), list)).toEqual([
+      "gpt-5-mini",
+    ]);
+  });
+
+  it("lists a toolkit key bound to the build's host", async () => {
+    const list = vi.fn(async () => ["o4"]);
+    const toolkit = JSON.stringify({
+      api_key: TOOLKIT_KEY,
+      platform_url: "https://api.askii.example/v1",
+    });
+    expect(await askiiModels(preset, store(toolkit, null), list)).toEqual([
+      "gpt-5-mini",
+      "o4",
+    ]);
+    expect(list).toHaveBeenCalledWith(TOOLKIT_KEY);
+  });
+
+  it("does not list a toolkit key bound to another Askii host", async () => {
+    const list = vi.fn(async () => ["o4"]);
+    const toolkit = JSON.stringify({
+      api_key: TOOLKIT_KEY,
+      platform_url: "https://api.sandbox.askii.ai",
+    });
+    expect(await askiiModels(preset, store(toolkit, null), list)).toEqual([
+      "gpt-5-mini",
+    ]);
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it("asks Askii nothing without a key", async () => {
+    const list = vi.fn(async () => ["o4"]);
+    expect(await askiiModels(preset, store(null, null), list)).toEqual([
+      "gpt-5-mini",
+    ]);
+    expect(list).not.toHaveBeenCalled();
   });
 });

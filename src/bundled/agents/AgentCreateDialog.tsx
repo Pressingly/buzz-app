@@ -26,6 +26,7 @@ import { Input } from "../../shared/design-system/ui/Input";
 import { useNamePrompt, useShake } from "./useNamePrompt";
 import { MigrationPreview } from "./AgentSettingsHost";
 import { RemoteAgentIntroduction } from "./RemoteAgentIntroduction";
+import { defaultAgentType } from "./default-type";
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -111,7 +112,7 @@ export function AgentCreateDialog({
   });
   const [typeKey, setTypeKey] = useState(
     (update ? (update.request.type ?? update.agent.type) : request?.type) ??
-      types[0]?.key ??
+      defaultAgentType(types)?.key ??
       "",
   );
   const type = types.find((item) => item.key === typeKey) ?? types[0];

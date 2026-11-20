@@ -8,6 +8,7 @@ import {
   type AskiiKey,
   type AskiiPreset,
   askiiEnv,
+  askiiModelIds,
   compiledPreset,
   resolveAskiiKey,
   toolkitKey,
@@ -126,4 +127,29 @@ export async function seedAskiiDefaults(
     { providerId: ASKII_PROVIDER, modelId: preset.model },
     timeoutMs,
   );
+}
+
+export type ListAskiiModels = (key: string) => Promise<string[]>;
+
+const nativeAskiiModels: ListAskiiModels = (key) =>
+  invoke<string[]>("askii_models", { key });
+
+/** The models the current key can run, without goose's `/model/info`.
+ * Native asks the build's host only, so a toolkit key bound to another Askii
+ * host is not listed there. A listing that fails or has no key leaves just
+ * the preset's model, so the picker never shows the failure. */
+export async function askiiModels(
+  preset: AskiiPreset,
+  store: AskiiStore = nativeAskiiStore,
+  list: ListAskiiModels = nativeAskiiModels,
+): Promise<string[]> {
+  const key = await currentAskiiKey(preset, store).catch(() => undefined);
+  const listable = key?.url === preset.url ? key : undefined;
+  const listed = listable
+    ? await list(listable.key).catch((error) => {
+        console.warn("Askii model list failed", error);
+        return [];
+      })
+    : [];
+  return askiiModelIds(listed, preset.model);
 }
