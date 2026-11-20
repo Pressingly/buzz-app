@@ -431,7 +431,11 @@ export class GooseSetup {
       models = this.listAskiiModels(preset).then((ids) =>
         ids.map((id) => ({ id, label: id })),
       );
-      const forget = () => this.live.delete(ASKII_PROVIDER);
+      const listing = models;
+      const forget = () => {
+        if (this.live.get(ASKII_PROVIDER) === listing)
+          this.live.delete(ASKII_PROVIDER);
+      };
       void models.then((listed) => {
         if (listed.length <= 1) forget();
       }, forget);

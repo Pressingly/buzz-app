@@ -173,6 +173,31 @@ describe("askiiModels", () => {
     ]);
   });
 
+  it("lists a toolkit key bound to the build's host", async () => {
+    const list = vi.fn(async () => ["o4"]);
+    const toolkit = JSON.stringify({
+      api_key: TOOLKIT_KEY,
+      platform_url: "https://api.askii.example/v1",
+    });
+    expect(await askiiModels(preset, store(toolkit, null), list)).toEqual([
+      "gpt-5-mini",
+      "o4",
+    ]);
+    expect(list).toHaveBeenCalledWith(TOOLKIT_KEY);
+  });
+
+  it("does not list a toolkit key bound to another Askii host", async () => {
+    const list = vi.fn(async () => ["o4"]);
+    const toolkit = JSON.stringify({
+      api_key: TOOLKIT_KEY,
+      platform_url: "https://api.sandbox.askii.ai",
+    });
+    expect(await askiiModels(preset, store(toolkit, null), list)).toEqual([
+      "gpt-5-mini",
+    ]);
+    expect(list).not.toHaveBeenCalled();
+  });
+
   it("asks Askii nothing without a key", async () => {
     const list = vi.fn(async () => ["o4"]);
     expect(await askiiModels(preset, store(null, null), list)).toEqual([

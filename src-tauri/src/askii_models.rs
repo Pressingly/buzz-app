@@ -10,11 +10,15 @@ use serde::Deserialize;
 const TIMEOUT: Duration = Duration::from_secs(20);
 const MAX_BODY: usize = 2 * 1024 * 1024;
 
-fn models_url() -> Option<String> {
-    option_env!("BUZZ_BUILD_ASKII_URL")
-        .map(str::trim)
-        .filter(|url| !url.is_empty())
-        .map(|url| format!("{}/v1/models", url.trim_end_matches('/')))
+/// `/v1/models` under the build URL, which may itself end in `/v1`, as the
+/// frontend's `askiiOrigin` accepts it.
+fn models_url(raw: &str) -> Option<String> {
+    let base = raw.trim().trim_end_matches('/');
+    let origin = base
+        .strip_suffix("/v1")
+        .unwrap_or(base)
+        .trim_end_matches('/');
+    (!origin.is_empty()).then(|| format!("{origin}/v1/models"))
 }
 
 #[derive(Deserialize)]
@@ -61,7 +65,7 @@ async fn read_bounded(mut response: reqwest::Response) -> Result<Vec<u8>, String
 /// one.
 #[tauri::command]
 pub(crate) async fn askii_models(key: String) -> Result<Vec<String>, String> {
-    let Some(url) = models_url() else {
+    let Some(url) = option_env!("BUZZ_BUILD_ASKII_URL").and_then(models_url) else {
         return Ok(Vec::new());
     };
     if !crate::askii_key::valid_key(&key) {
@@ -98,6 +102,23 @@ mod tests {
             model_ids(body).unwrap(),
             vec!["claude-sonnet-4-5".to_owned(), "gpt-5-mini".to_owned()]
         );
+    }
+
+    #[test]
+    fn lists_under_the_build_origin_with_or_without_v1() {
+        for raw in [
+            "https://api.askii.ai",
+            "https://api.askii.ai/",
+            "https://api.askii.ai/v1",
+            " https://api.askii.ai/v1/ ",
+        ] {
+            assert_eq!(
+                models_url(raw).as_deref(),
+                Some("https://api.askii.ai/v1/models"),
+                "{raw}"
+            );
+        }
+        assert_eq!(models_url("  "), None);
     }
 
     #[test]
